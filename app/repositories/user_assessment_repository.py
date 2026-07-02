@@ -11,8 +11,11 @@ from sqlalchemy.orm import selectinload
 from app.models.assessment_option import AssessmentOption
 from app.models.assessment_question import AssessmentQuestion
 from app.models.course import Course
+from app.models.lesson import Lesson
+from app.models.lesson_task import LessonTask
 from app.models.module import Module
 from app.models.module_assessment import ModuleAssessment
+from app.models.task_submission import TaskSubmission
 from app.models.user_assessment_attempt import (
     UserAssessmentAnswer,
     UserAssessmentAttempt,
@@ -22,6 +25,7 @@ from app.schemas.module_assessment import (
     AttemptResult,
     CourseProgressSummary,
     ModuleProgressItem,
+    TaskProgressItem,
 )
 
 
@@ -187,66 +191,52 @@ class UserAssessmentRepository:
         course_id: int,
     ) -> CourseProgressSummary:
         course_r = await db.execute(
-            select(Course).where(Course.id == course_id)
+            select(Course)
+            .where(Course.id == course_id)
+            .options(
+                selectinload(Course.modules)
+                .selectinload(Module.assessment)
+                .selectinload(ModuleAssessment.questions),
+            )
         )
         course = course_r.scalar_one_or_none()
         if not course:
             raise ValueError("Curso no encontrado")
 
-        modules_r = await db.execute(
-            select(Module)
-            .where(Module.course_id == course_id)
-            .order_by(Module.order_index)
+        modules = course.modules
+        task_progress_map = await self._get_module_task_progress(
+            db, modules, user_id
         )
-        modules = modules_r.scalars().all()
+
+        assessment_ids = [m.assessment.id for m in modules if m.assessment]
+        attempts_map: dict[int, list[UserAssessmentAttempt]] = {}
+        if assessment_ids:
+            a_r = await db.execute(
+                select(UserAssessmentAttempt)
+                .where(
+                    UserAssessmentAttempt.assessment_id.in_(assessment_ids),
+                    UserAssessmentAttempt.user_id == user_id,
+                )
+                .order_by(UserAssessmentAttempt.finished_at.desc().nullslast())
+            )
+            for a in a_r.scalars().all():
+                attempts_map.setdefault(a.assessment_id, []).append(a)
 
         module_items: list[ModuleProgressItem] = []
         completed = 0
 
         for mod in modules:
-            assessment_r = await db.execute(
-                select(ModuleAssessment).where(
-                    ModuleAssessment.module_id == mod.id
-                )
-            )
-            assessment = assessment_r.scalar_one_or_none()
-
-            if not assessment:
-                module_items.append(
-                    ModuleProgressItem(
-                        module_id=mod.id,
-                        module_title=mod.title,
-                        module_order=mod.order_index,
-                        total_assessment_questions=0,
-                        attempts_count=0,
-                        last_score=None,
-                        passed=False,
-                    )
-                )
-                continue
-
-            questions_r = await db.execute(
-                select(func.count(AssessmentQuestion.id)).where(
-                    AssessmentQuestion.assessment_id == assessment.id
-                )
-            )
-            total_q = questions_r.scalar() or 0
-
-            attempts_r = await db.execute(
-                select(UserAssessmentAttempt).where(
-                    UserAssessmentAttempt.assessment_id == assessment.id,
-                    UserAssessmentAttempt.user_id == user_id,
-                )
-                .order_by(UserAssessmentAttempt.finished_at.desc().nullslast())
-            )
-            attempts = attempts_r.scalars().all()
-
+            assessment = mod.assessment
+            total_q = len(assessment.questions) if assessment else 0
+            attempts = attempts_map.get(assessment.id, []) if assessment else []
             attempts_count = len(attempts)
             last_score = float(attempts[0].score) if attempts else None
             passed = any(a.passed for a in attempts)
 
             if passed:
                 completed += 1
+
+            tp = task_progress_map.get(mod.id, {"total_tasks": 0, "submitted_tasks": 0, "tasks": []})
 
             module_items.append(
                 ModuleProgressItem(
@@ -257,6 +247,9 @@ class UserAssessmentRepository:
                     attempts_count=attempts_count,
                     last_score=last_score,
                     passed=passed,
+                    total_tasks=tp["total_tasks"],
+                    submitted_tasks=tp["submitted_tasks"],
+                    tasks=[TaskProgressItem(**t) for t in tp["tasks"]],
                 )
             )
 
@@ -283,30 +276,183 @@ class UserAssessmentRepository:
     ) -> tuple[list[CourseProgressSummary], float]:
         from app.models.course import CourseEnrollment
 
-        enrollments_r = await db.execute(
-            select(CourseEnrollment).where(
+        enr_r = await db.execute(
+            select(CourseEnrollment.course_id).where(
                 CourseEnrollment.user_id == user_id
             )
         )
-        enrollments = enrollments_r.scalars().all()
+        enrolled_ids = {row[0] for row in enr_r.all()}
+        if not enrolled_ids:
+            return [], 0.0
+
+        r = await db.execute(
+            select(Course)
+            .where(Course.id.in_(enrolled_ids))
+            .order_by(Course.title)
+            .options(
+                selectinload(Course.modules)
+                .selectinload(Module.assessment)
+                .selectinload(ModuleAssessment.questions),
+            )
+        )
+        courses = r.scalars().all()
+
+        all_modules = [m for c in courses for m in c.modules]
+        task_progress_map = await self._get_module_task_progress(
+            db, all_modules, user_id
+        )
+
+        all_assessment_ids = [
+            m.assessment.id for c in courses
+            for m in c.modules if m.assessment
+        ]
+        attempts_map: dict[int, list[UserAssessmentAttempt]] = {}
+        if all_assessment_ids:
+            a_r = await db.execute(
+                select(UserAssessmentAttempt)
+                .where(
+                    UserAssessmentAttempt.assessment_id.in_(all_assessment_ids),
+                    UserAssessmentAttempt.user_id == user_id,
+                )
+                .order_by(UserAssessmentAttempt.finished_at.desc())
+            )
+            for a in a_r.scalars().all():
+                attempts_map.setdefault(a.assessment_id, []).append(a)
 
         course_summaries: list[CourseProgressSummary] = []
-        total_pct = 0.0
-        count = 0
+        for course in courses:
+            modules = course.modules
+            module_items: list[ModuleProgressItem] = []
+            completed = 0
 
-        for enrollment in enrollments:
-            try:
-                summary = await self.get_course_progress(
-                    db, user_id, enrollment.course_id
+            for mod in modules:
+                assessment = mod.assessment
+                total_q = len(assessment.questions) if assessment else 0
+                attempts = attempts_map.get(assessment.id, []) if assessment else []
+                attempts_count = len(attempts)
+                last_score = float(attempts[0].score) if attempts else None
+                passed = any(a.passed for a in attempts)
+
+                if passed:
+                    completed += 1
+
+                tp = task_progress_map.get(mod.id, {"total_tasks": 0, "submitted_tasks": 0, "tasks": []})
+
+                module_items.append(
+                    ModuleProgressItem(
+                        module_id=mod.id,
+                        module_title=mod.title,
+                        module_order=mod.order_index,
+                        total_assessment_questions=total_q,
+                        attempts_count=attempts_count,
+                        last_score=last_score,
+                        passed=passed,
+                        total_tasks=tp["total_tasks"],
+                        submitted_tasks=tp["submitted_tasks"],
+                        tasks=[TaskProgressItem(**t) for t in tp["tasks"]],
+                    )
                 )
-                course_summaries.append(summary)
-                total_pct += summary.progress_percent
-                count += 1
-            except ValueError:
-                continue
 
-        overall = round(total_pct / count, 2) if count > 0 else 0.0
+            total = len(modules)
+            pct = round((completed / total) * 100, 2) if total > 0 else 0.0
+
+            course_summaries.append(
+                CourseProgressSummary(
+                    course_id=course.id,
+                    course_title=course.title,
+                    total_modules=total,
+                    completed_modules=completed,
+                    progress_percent=pct,
+                    modules=module_items,
+                )
+            )
+
+        overall = round(
+            sum(s.progress_percent for s in course_summaries) / len(course_summaries), 2
+        ) if course_summaries else 0.0
+
         return course_summaries, overall
+
+
+    async def _get_module_task_progress(
+        self,
+        db: AsyncSession,
+        modules: list[Module],
+        user_id: int,
+    ) -> dict[int, dict]:
+        """Retorna mapa module_id → {total_tasks, submitted_tasks, tasks[]}."""
+        module_ids = [m.id for m in modules]
+        if not module_ids:
+            return {}
+
+        lessons_r = await db.execute(
+            select(Lesson).where(Lesson.module_id.in_(module_ids))
+        )
+        lessons = lessons_r.scalars().all()
+        if not lessons:
+            return {m.id: {"total_tasks": 0, "submitted_tasks": 0, "tasks": []} for m in modules}
+
+        lesson_ids = [l.id for l in lessons]
+        lesson_map: dict[int, list[int]] = {}
+        for l in lessons:
+            lesson_map.setdefault(l.module_id, []).append(l.id)
+
+        tasks_r = await db.execute(
+            select(LessonTask).where(LessonTask.lesson_id.in_(lesson_ids))
+        )
+        task_list = tasks_r.scalars().all()
+        if not task_list:
+            return {m.id: {"total_tasks": 0, "submitted_tasks": 0, "tasks": []} for m in modules}
+
+        task_ids = [t.id for t in task_list]
+        task_by_id = {t.id: t for t in task_list}
+        task_by_lesson: dict[int, list[LessonTask]] = {}
+        for t in task_list:
+            task_by_lesson.setdefault(t.lesson_id, []).append(t)
+
+        subs_r = await db.execute(
+            select(TaskSubmission).where(
+                TaskSubmission.task_id.in_(task_ids),
+                TaskSubmission.user_id == user_id,
+            )
+        )
+        submissions = subs_r.scalars().all()
+        submitted_task_ids = {s.task_id for s in submissions}
+        sub_by_task = {s.task_id: s for s in submissions}
+
+        result: dict[int, dict] = {}
+        for mod in modules:
+            mod_lesson_ids = lesson_map.get(mod.id, [])
+            mod_tasks: list[LessonTask] = []
+            for lid in mod_lesson_ids:
+                mod_tasks.extend(task_by_lesson.get(lid, []))
+
+            tasks_detail = []
+            submitted_count = 0
+            for t in mod_tasks:
+                is_submitted = t.id in submitted_task_ids
+                if is_submitted:
+                    submitted_count += 1
+                sub = sub_by_task.get(t.id)
+                tasks_detail.append(
+                    {
+                        "task_id": t.id,
+                        "task_title": t.title,
+                        "submitted": is_submitted,
+                        "submission_id": sub.id if sub else None,
+                        "file_url": sub.file_url if sub else None,
+                        "original_filename": sub.original_filename if sub else None,
+                        "submitted_at": sub.submitted_at if sub else None,
+                    }
+                )
+
+            result[mod.id] = {
+                "total_tasks": len(mod_tasks),
+                "submitted_tasks": submitted_count,
+                "tasks": tasks_detail,
+            }
+
+        return result
 
 
 user_assessment_repository = UserAssessmentRepository()

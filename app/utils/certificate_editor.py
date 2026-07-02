@@ -19,20 +19,23 @@ from reportlab.pdfbase.ttfonts import TTFont
 from reportlab.pdfgen import canvas as rl_canvas
 from reportlab.platypus import Paragraph
 
+from app.services.datetime_utils import number_to_spanish_years_text
+
 # --- Coordenadas (origen abajo-izquierda, puntos PDF). Plantilla ~842.5 x 595.5 (horizontal). ---
 # Ajustar midiendo contra app/templates/certificate_reference.pdf
 _LAYOUT = {
-    "student_name_y": 305.82,
-    "identity_y": 282.20,
-    "course_line_y": 258.58,
-    "cert_name_y": 232.23,
-    "hours_y": 200.60,
-    "legal_top_y": 188.0,
+    "student_name_y": 345.82,
+    "identity_y": 322.20,
+    "course_line_y": 298.58,
+    "cert_name_y": 272.23,
+    "hours_y": 240.60,
+    "legal_top_y": 228.0,
     "legal_max_width": 720.0,
     "legal_margin_x": 61.0,
-    "qr_from_right": 64.0,
-    "qr_from_bottom": 40.0,
-    "qr_max_side": 120.0,
+    "qr_from_right": 670.0,
+    "qr_from_bottom": 90.0,
+    "qr_max_side": 80.0,
+    "validated_y": 60.0,
 }
 
 _MESES_ES = (
@@ -51,21 +54,21 @@ _MESES_ES = (
 )
 
 _CERT_KIND_ES = {
-    "basic": "Básico",
-    "advanced": "Avanzado",
-    "diploma": "Diplomado",
+    "basic": "BÁSICO",
+    "advanced": "AVANZADO",
+    "diploma": "DIPLOMADO",
 }
 
 
 def _identity_phrase(identity_type: str, identity_number: str) -> str:
     t = (identity_type or "").upper().strip()
     if t == "CC":
-        kind = "CÉDULA DE CIUDADANÍA"
+        kind = "cédula de ciudadanía"
     elif t == "TI":
-        kind = "TARJETA DE IDENTIDAD"
+        kind = "tarjeta de identidad"
     else:
-        kind = "DOCUMENTO DE IDENTIDAD"
-    return f"IDENTIFICADO CON {kind} No. {identity_number}"
+        kind = "documento de identidad"
+    return f"Identificado con {kind} No. {identity_number}"
 
 
 def _legal_paragraph_text(issued_on: date) -> str:
@@ -73,27 +76,34 @@ def _legal_paragraph_text(issued_on: date) -> str:
     month = _MESES_ES[issued_on.month - 1]
     year = issued_on.year
     return (
-        f"ESTE CERTIFICADO ES EXPEDIDO EN LA CIUDAD DE BOGOTÁ A LOS {day} DÍAS "
-        f"DEL MES DE {month} DEL {year}, LA PRESENTE CERTIFICACIÓN SE EXPIDE MEDIANTE "
-        "EL MARCO NORMATIVO PARA LA EDUCACIÓN INFORMAL Y NO CONDUCE A TITULO ALGUNO O "
-        "CERTIFICACIÓN DE APTITUD OCUPACIONAL."
+        f"Este certificado es expedido en la ciudad de Neiva a los {day} días "
+        f"del mes de {month} del {year}, y se expide mediante el marco normativo de la "
+        "educación informal y no conduce a título alguno o "
+        "certificación de aptitud ocupacional."
     )
 
 
+_FONTS_DIR = Path(__file__).resolve().parent.parent / "templates" / "fonts"
+
+
 def _font_candidates() -> dict[str, list[str]]:
+    _pp = str(_FONTS_DIR / "Poppins-Regular.ttf")
     return {
         "TrebuchetMS": [
+            _pp,
             "/usr/share/fonts/truetype/msttcorefonts/Trebuchet_MS.ttf",
             "/usr/share/fonts/truetype/msttcorefonts/trebuc.ttf",
             "C:/Windows/fonts/trebuc.ttf",
             "C:/Windows/fonts/trebucbd.ttf",
         ],
         "Tahoma": [
+            _pp,
             "/usr/share/fonts/truetype/msttcorefonts/Tahoma.ttf",
             "/usr/share/fonts/truetype/msttcorefonts/tahoma.ttf",
             "C:/Windows/fonts/tahoma.ttf",
         ],
         "Cambria": [
+            _pp,
             "/usr/share/fonts/truetype/msttcorefonts/cambria.ttc",
             "/usr/share/fonts/truetype/msttcorefonts/Cambria.ttf",
             "C:/Windows/fonts/cambria.ttc",
@@ -151,6 +161,31 @@ def _register_fonts() -> dict[str, str]:
             if Path(p).is_file():
                 pdfmetrics.registerFont(TTFont("Cambria", p))
                 out["Cambria"] = "Cambria"
+                break
+    # Bold variants
+    _pb = str(_FONTS_DIR / "Poppins-Bold.ttf")
+    _bold_variants: dict[str, list[str]] = {
+        "TrebuchetMS-Bold": [
+            _pb,
+            "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf",
+        ],
+        "Tahoma-Bold": [
+            _pb,
+            "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf",
+        ],
+        "Cambria-Bold": [
+            _pb,
+            "/usr/share/fonts/truetype/dejavu/DejaVuSerif-Bold.ttf",
+        ],
+    }
+    for bold_logical, bold_paths in _bold_variants.items():
+        for p in bold_paths:
+            if Path(p).is_file():
+                try:
+                    pdfmetrics.registerFont(TTFont(bold_logical, p))
+                    out[bold_logical] = bold_logical
+                except Exception:
+                    continue
                 break
     return out
 
@@ -240,29 +275,34 @@ class CertificateEditor:
         f_treb = fonts.get("TrebuchetMS", "Helvetica")
         f_tahoma = fonts.get("Tahoma", "Helvetica")
         f_cambria = fonts.get("Cambria", "Helvetica")
+        f_treb_bold = fonts.get("TrebuchetMS-Bold", f_treb)
+        f_tahoma_bold = fonts.get("Tahoma-Bold", f_tahoma)
+        f_cambria_bold = fonts.get("Cambria-Bold", f_cambria)
 
         buf = BytesIO()
         c = rl_canvas.Canvas(buf, pagesize=(w_pt, h_pt))
         cx = w_pt / 2.0
-        blue = HexColor("#004A98")
-        navy = HexColor("#051C49")
+        blue = HexColor("#00A8E9")
+        navy = HexColor("#0D2B49")
+        black = HexColor("#000000")
+        gray = HexColor("#565656")
 
         kind_es = _CERT_KIND_ES.get(
             (data.certificate_type_kind or "").lower(),
             data.certificate_type_kind or "",
         )
-        course_line = f"Asistió al Curso {kind_es}"
+        course_line = f"ASISTIÓ AL CURSO {kind_es}:"
 
         # Nombre estudiante
-        c.setFont(f_treb, 32.5)
-        c.setFillColor(blue)
+        c.setFont(f_treb_bold, 32.5)
+        c.setFillColor(black)
         c.drawCentredString(
-            cx, _LAYOUT["student_name_y"], (data.student_full_name).upper()
+            cx, _LAYOUT["student_name_y"], (data.student_full_name)
         )
 
         # Identidad
         c.setFont(f_tahoma, 17)
-        c.setFillColor(navy)
+        c.setFillColor(black)
         c.drawCentredString(
             cx,
             _LAYOUT["identity_y"],
@@ -270,18 +310,18 @@ class CertificateEditor:
         )
 
         # Curso / tipo
-        c.setFont(f_cambria, 18)
-        c.setFillColor(navy)
+        c.setFont(f_cambria_bold, 18)
+        c.setFillColor(black)
         c.drawCentredString(cx, _LAYOUT["course_line_y"], course_line)
 
         # Nombre certificado
-        c.setFont(f_tahoma, 17)
+        c.setFont(f_tahoma_bold, 17)
         c.drawCentredString(
             cx, _LAYOUT["cert_name_y"], (data.certificate_type_name).upper()
         )
 
         # Horas
-        c.setFont(f_cambria, 18)
+        c.setFont(f_cambria, 17)
         c.drawCentredString(
             cx,
             _LAYOUT["hours_y"],
@@ -293,9 +333,9 @@ class CertificateEditor:
         style = ParagraphStyle(
             name="legal",
             fontName=f_tahoma,
-            fontSize=9,
+            fontSize=11,
             leading=11,
-            textColor=navy,
+            textColor=black,
             alignment=TA_CENTER,
         )
         para = Paragraph(legal.replace("\n", "<br/>"), style)
@@ -316,15 +356,14 @@ class CertificateEditor:
 
         # Vigencia
         if data.validity_years is not None:
-            from app.services.datetime_utils import number_to_spanish_years_text
-            c.setFont(f_tahoma, 9)
-            c.setFillColor(navy)
+            c.setFont(f_tahoma_bold, 9)
+            c.setFillColor(black)
             text = (
-                f"Este certificado tiene vigencia de "
-                f"{number_to_spanish_years_text(data.validity_years)} "
-                f"desde su fecha de emisión"
+                f"ESTADO DE VIGENCIA: "
+                f"VENCE EN {number_to_spanish_years_text(data.validity_years)} "
+                f"DESDE SU FECHA DE EXPEDICIÓN"
             )
-            c.drawCentredString(cx, _LAYOUT["qr_from_bottom"], text)
+            c.drawCentredString(cx, _LAYOUT["validated_y"], text)
 
         c.showPage()
         c.save()

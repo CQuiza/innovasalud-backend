@@ -27,6 +27,21 @@ def issued_body(app_name: str, student_name: str, verify_link: str) -> str:
 </html>"""
 
 
+def contact_body(name: str, email: str, program: str, message: str) -> str:
+    return f"""<html>
+<body style="font-family: Arial, sans-serif; padding: 20px;">
+    <h2>Nuevo contacto desde la web</h2>
+    <table style="border-collapse: collapse; width: 100%;">
+        <tr><td style="padding: 8px; font-weight: bold;">Nombre:</td><td style="padding: 8px;">{name}</td></tr>
+        <tr><td style="padding: 8px; font-weight: bold;">Email:</td><td style="padding: 8px;">{email}</td></tr>
+        <tr><td style="padding: 8px; font-weight: bold;">Programa de interés:</td><td style="padding: 8px;">{program}</td></tr>
+    </table>
+    <h3>Mensaje:</h3>
+    <p style="background: #f5f5f5; padding: 16px; border-radius: 8px;">{message}</p>
+</body>
+</html>"""
+
+
 def expired_body(app_name: str, student_name: str) -> str:
     return f"""<html>
 <body style="font-family: Arial, sans-serif; padding: 20px;">

@@ -7,6 +7,7 @@ from app.api.v1.endpoints import (
     certificate_audit,
     certificate_types,
     certificates,
+    contact,
     course_enrollments,
     courses,
     email_audit,
@@ -15,6 +16,7 @@ from app.api.v1.endpoints import (
     lessons,
     module_assessments,
     modules,
+    task_submissions,
     tasks,
     user_audit,
     user_progress,
@@ -36,8 +38,10 @@ api_router.include_router(user_progress.router)
 api_router.include_router(certificate_types.router)
 api_router.include_router(certificates.router)
 api_router.include_router(certificate_audit.router)
+api_router.include_router(contact.router)
 api_router.include_router(course_enrollments.router)
 api_router.include_router(email_audit.router)
+api_router.include_router(task_submissions.router)
 api_router.include_router(tasks.router)
 api_router.include_router(user_audit.router)
 api_router.include_router(worker_audit.router)

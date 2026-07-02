@@ -23,6 +23,7 @@ from app.models.lesson_task import LessonTask
 from app.models.lesson import Lesson
 from app.models.module import Module
 from app.models.module_assessment import ModuleAssessment
+from app.models.task_submission import TaskSubmission
 from app.models.user_assessment_attempt import UserAssessmentAttempt, UserAssessmentAnswer
 from app.models.progress import UserProgress
 from app.models.user import User
@@ -49,6 +50,7 @@ __all__ = [
     "LessonTask",
     "Module",
     "ModuleAssessment",
+    "TaskSubmission",
     "User",
     "UserAssessmentAnswer",
     "UserAssessmentAttempt",

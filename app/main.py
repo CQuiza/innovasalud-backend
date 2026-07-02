@@ -2,14 +2,16 @@
 
 import logging
 import secrets
+import re
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from slowapi import _rate_limit_exceeded_handler
-from sqlalchemy import select
+from sqlalchemy import select, text
 from sqlalchemy.exc import IntegrityError
+from sqlalchemy.ext.asyncio import create_async_engine
 from starlette.middleware.trustedhost import TrustedHostMiddleware
 
 from app.core.rate_limit import limiter
@@ -42,9 +44,6 @@ logger = logging.getLogger(__name__)
 
 async def create_database_if_not_exists() -> None:
     """Crea la base de datos destino si no existe (solo para PostgreSQL)."""
-    import re
-    from sqlalchemy import text
-    from sqlalchemy.ext.asyncio import create_async_engine
 
     settings = get_settings()
     db_url = settings.get_database_url()
@@ -186,6 +185,7 @@ app.add_middleware(
     allow_credentials=True,
     allow_methods=["GET", "POST", "PATCH", "DELETE"],
     allow_headers=["Authorization", "Content-Type"],
+    expose_headers=["Content-Disposition"],
 )
 
 
@@ -196,7 +196,7 @@ async def add_security_headers(request: Request, call_next):
     response.headers["X-Frame-Options"] = "DENY"
     response.headers["X-XSS-Protection"] = "0"
     response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
-    response.headers["Cache-Control"] = "no-store"
+    response.headers["Cache-Control"] = "no-cache, private"
     return response
 
 app.include_router(api_router, prefix=settings.api_v1_prefix)

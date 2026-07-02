@@ -1,5 +1,7 @@
 """Esquemas de evaluaciones por módulo."""
 
+from datetime import datetime
+
 from pydantic import BaseModel, ConfigDict, field_validator
 from typing import Literal
 
@@ -94,6 +96,19 @@ class AttemptResult(BaseModel):
     answers: list[AnswerResult]
 
 
+
+
+
+class TaskProgressItem(BaseModel):
+    task_id: int
+    task_title: str
+    submitted: bool
+    submission_id: int | None = None
+    file_url: str | None = None
+    original_filename: str | None = None
+    submitted_at: datetime | None = None
+
+
 class ModuleProgressItem(BaseModel):
     module_id: int
     module_title: str
@@ -102,6 +117,9 @@ class ModuleProgressItem(BaseModel):
     attempts_count: int
     last_score: float | None
     passed: bool
+    total_tasks: int = 0
+    submitted_tasks: int = 0
+    tasks: list[TaskProgressItem] = []
 
 
 class CourseProgressSummary(BaseModel):

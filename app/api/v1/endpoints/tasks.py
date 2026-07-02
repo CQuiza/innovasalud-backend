@@ -28,6 +28,7 @@ from app.services.access import (
     require_course_visible,
     teacher_owns_module,
 )
+from app.utils.helpers import validate_file_extension
 from app.utils.minio_client import get_minio_client
 
 router = APIRouter(prefix="/tasks", tags=["tasks"])
@@ -158,9 +159,7 @@ async def upload_task_file(
             detail=f"El archivo supera el límite de {settings.task_max_upload_size_mb} MB",
         )
     original_filename = file.filename or f"task-{task_id}"
-    ext = ""
-    if original_filename and "." in original_filename:
-        ext = original_filename.rsplit(".", 1)[-1]
+    ext = validate_file_extension(original_filename)
     object_name = f"{settings.minio_path_tasks}/{task_id}/{task_id}.{ext}"
 
     try:
