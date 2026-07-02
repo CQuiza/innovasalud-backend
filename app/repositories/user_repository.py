@@ -2,9 +2,12 @@
 
 from collections.abc import Sequence
 
-from sqlalchemy import select
+from sqlalchemy import String, cast, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 
+from app.models.certificate import Certificate
+from app.models.certificate_type import CertificateType
 from app.models.enums import UserRole
 from app.models.user import User
 
@@ -26,6 +29,29 @@ class UserRepository:
         r = await db.execute(select(User).where(User.phone_number == phone_number))
         return r.scalar_one_or_none()
 
+    async def count(
+        self,
+        db: AsyncSession,
+        *,
+        role: UserRole | None = None,
+        exclude_superuser: bool = False,
+        search: str | None = None,
+    ) -> int:
+        q = select(func.count(User.id))
+        if role is not None:
+            q = q.where(User.role == role.value)
+        if exclude_superuser:
+            q = q.where(User.role != UserRole.superuser.value)
+        if search:
+            like = f"%{search}%"
+            q = q.where(
+                User.name.ilike(like)
+                | User.email.ilike(like)
+                | User.identity_number.ilike(like)
+            )
+        r = await db.execute(q)
+        return r.scalar_one()
+
     async def list(
         self,
         db: AsyncSession,
@@ -34,13 +60,22 @@ class UserRepository:
         limit: int = 100,
         role: UserRole | None = None,
         exclude_superuser: bool = False,
+        search: str | None = None,
     ) -> Sequence[User]:
-        q = select(User).offset(skip).limit(limit)
+        q = select(User)
         if role is not None:
             q = q.where(User.role == role.value)
         if exclude_superuser:
             q = q.where(User.role != UserRole.superuser.value)
-        r = await db.execute(q.order_by(User.id))
+        if search:
+            like = f"%{search}%"
+            q = q.where(
+                User.name.ilike(like)
+                | User.email.ilike(like)
+                | User.identity_number.ilike(like)
+            )
+        q = q.offset(skip).limit(limit).order_by(User.id)
+        r = await db.execute(q)
         return r.scalars().all()
 
     async def create(
@@ -95,26 +130,58 @@ class UserRepository:
         await db.refresh(user)
         return user
 
+    async def count_certified_students(
+        self,
+        db: AsyncSession,
+        *,
+        search: str | None = None,
+    ) -> int:
+        q = (
+            select(func.count(User.id.distinct()))
+            .select_from(User)
+            .join(Certificate, User.id == Certificate.user_id)
+            .outerjoin(CertificateType, Certificate.certificate_type_id == CertificateType.id)
+            .where(User.role == UserRole.student.value)
+        )
+        if search:
+            like = f"%{search}%"
+            q = q.where(
+                User.name.ilike(like)
+                | User.email.ilike(like)
+                | User.identity_number.ilike(like)
+                | cast(Certificate.unique_id, String).ilike(like)
+                | CertificateType.name.ilike(like)
+            )
+        r = await db.execute(q)
+        return r.scalar_one()
+
     async def list_certified_students(
         self,
         db: AsyncSession,
         *,
         skip: int = 0,
         limit: int = 100,
+        search: str | None = None,
     ) -> Sequence[User]:
-        from sqlalchemy.orm import selectinload
-        from app.models.certificate import Certificate
-
         q = (
             select(User)
             .join(Certificate, User.id == Certificate.user_id)
+            .outerjoin(CertificateType, Certificate.certificate_type_id == CertificateType.id)
             .where(User.role == UserRole.student.value)
             .distinct()
             .options(selectinload(User.certificates))
-            .offset(skip)
-            .limit(limit)
         )
-        r = await db.execute(q.order_by(User.id))
+        if search:
+            like = f"%{search}%"
+            q = q.where(
+                User.name.ilike(like)
+                | User.email.ilike(like)
+                | User.identity_number.ilike(like)
+                | cast(Certificate.unique_id, String).ilike(like)
+                | CertificateType.name.ilike(like)
+            )
+        q = q.offset(skip).limit(limit).order_by(User.id)
+        r = await db.execute(q)
         return r.scalars().all()
 
     async def delete(self, db: AsyncSession, user: User) -> None:

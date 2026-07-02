@@ -10,6 +10,7 @@ from app.api.v1.endpoints import (
     contact,
     course_enrollments,
     courses,
+    dashboard,
     email_audit,
     health,
     lesson_files,
@@ -38,6 +39,7 @@ api_router.include_router(user_progress.router)
 api_router.include_router(certificate_types.router)
 api_router.include_router(certificates.router)
 api_router.include_router(certificate_audit.router)
+api_router.include_router(dashboard.router)
 api_router.include_router(contact.router)
 api_router.include_router(course_enrollments.router)
 api_router.include_router(email_audit.router)

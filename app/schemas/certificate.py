@@ -74,3 +74,8 @@ class CertificateBatchIssueRequest(BaseModel):
 class CertificateBatchIssueResponse(BaseModel):
     issued: list[CertificateRead]
     errors: list[dict[str, object]]
+
+
+class CertificateListResponse(BaseModel):
+    items: list[CertificateRead]
+    total: int
