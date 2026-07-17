@@ -24,7 +24,6 @@ router = APIRouter(prefix="/courses", tags=["courses"])
 
 ALLOWED_IMAGE_EXTS = frozenset({".jpg", ".jpeg", ".png", ".gif", ".webp"})
 COURSE_IMAGE_MAX_SIZE = 5 * 1024 * 1024  # 5 MB
-DEFAULT_COURSE_IMAGE_KEY = "courses/images/default.png"
 
 _EXT_MEDIA_TYPE = {
     ".jpg": "image/jpeg",
@@ -177,7 +176,8 @@ async def get_course_image(
 
     settings = get_settings()
     client = get_minio_client(settings)
-    object_name = c.image_url or DEFAULT_COURSE_IMAGE_KEY
+    default_key = f"{settings.minio_path_course_images}/default.png"
+    object_name = c.image_url or default_key
 
     try:
         data = await asyncio.to_thread(client.download_bytes, object_name)
@@ -185,7 +185,7 @@ async def get_course_image(
         code = str(getattr(e, "code", "") or "").lower()
         if code in ("nosuchkey", "notfound"):
             try:
-                data = await asyncio.to_thread(client.download_bytes, DEFAULT_COURSE_IMAGE_KEY)
+                data = await asyncio.to_thread(client.download_bytes, default_key)
             except S3Error:
                 raise HTTPException(
                     status_code=status.HTTP_404_NOT_FOUND,

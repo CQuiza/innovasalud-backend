@@ -156,8 +156,10 @@ async def _seed_default_course_image() -> None:
         logger.warning("MinIO no disponible para sembrar imagen default: %s", e)
         return
 
+    default_key = f"{settings.minio_path_course_images}/default.png"
+
     try:
-        await asyncio.to_thread(client.download_bytes, "courses/images/default.png")
+        await asyncio.to_thread(client.download_bytes, default_key)
         logger.info("Imagen default de cursos ya existe en MinIO")
         return
     except Exception:
@@ -174,7 +176,7 @@ async def _seed_default_course_image() -> None:
     try:
         await asyncio.to_thread(
             client.upload_bytes,
-            "courses/images/default.png",
+            default_key,
             data,
             content_type="image/png",
         )
