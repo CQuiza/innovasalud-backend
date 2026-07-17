@@ -86,6 +86,9 @@ class Settings(BaseSettings):
     minio_path_lesson_files: str = Field(
         default="lessons/files", alias="MINIO_PATH_LESSON_FILES"
     )
+    minio_path_course_images: str = Field(
+        default="courses/images", alias="MINIO_PATH_COURSE_IMAGES"
+    )
     minio_path_task_submissions: str = Field(
         default="tasks/submissions", alias="MINIO_PATH_TASK_SUBMISSIONS"
     )

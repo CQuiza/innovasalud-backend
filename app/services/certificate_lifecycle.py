@@ -103,7 +103,7 @@ class CertificateLifecycleService:
         await db.flush()
         await db.refresh(cert)
 
-        verify_url = f"{base}{api}/certificates/view/{uid}"
+        verify_url = f"{base}/search?identity={student.identity_number}"
         pdf_bytes, qr_bytes = self._pdf.generate(
             student, ct, issued_at, verify_url, settings,
             validity_years=validity_years,

@@ -31,6 +31,7 @@ class CourseRead(BaseModel):
     description: str | None
     certificate_type_id: int | None
     teacher_id: int | None
+    image_url: str | None = None
     created_at: datetime
     updated_at: datetime
     status: CourseStatus
@@ -44,6 +45,7 @@ class CoursePublicRead(BaseModel):
     id: int
     title: str
     description: str | None
+    image_url: str | None = None
     status: CourseStatus
 
     model_config = ConfigDict(from_attributes=True)

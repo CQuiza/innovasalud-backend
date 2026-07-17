@@ -59,7 +59,7 @@ class CourseRepository:
         return c
 
     async def update(self, db: AsyncSession, course: Course, fields: dict[str, object]) -> Course:
-        allowed = {"title", "description", "certificate_type_id", "teacher_id", "status"}
+        allowed = {"title", "description", "certificate_type_id", "teacher_id", "status", "image_url"}
         for k, v in fields.items():
             if k in allowed:
                 setattr(course, k, v)

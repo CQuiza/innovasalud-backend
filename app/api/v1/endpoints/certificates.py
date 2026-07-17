@@ -297,7 +297,7 @@ async def delete_certificate(
 
 
 @router.get("/search-by-identity/{identity_number}", response_model=list[CertificateSearchResult])
-@limiter.limit("5/minute")
+@limiter.limit("30/minute")
 async def search_certificates_by_identity(
     request: Request, identity_number: str,
     db: Annotated[AsyncSession, Depends(get_db)],

@@ -17,7 +17,7 @@ ALLOWED_EXTENSIONS = frozenset({
 
 def student_display_name(user: User) -> str:
     parts = [user.name, user.first_last_name, user.second_last_name or ""]
-    return " ".join(x for x in parts if x).strip()
+    return " ".join(x for x in parts if x).strip().upper()
 
 
 def validate_file_extension(filename: str | None) -> str:

@@ -20,6 +20,7 @@ from app.core.database import AsyncSessionLocal, Base, engine
 from app.core.security import get_password_hash
 from app.core.settings import get_settings
 from app.api.v1.router import api_router
+from app.utils.minio_client import get_minio_client
 from app.models import (  # noqa: F401 — registra metadatos
     Certificate,
     CertificateAudit,
@@ -142,6 +143,46 @@ async def _seed_system_bot() -> None:
         logger.info("System bot '%s' creado.", settings.system_bot_user_email)
 
 
+async def _seed_default_course_image() -> None:
+    """Sube la imagen default de cursos a MinIO si no existe (tolerante a fallos)."""
+    import asyncio
+    from pathlib import Path
+
+    try:
+        settings = get_settings()
+        client = get_minio_client(settings)
+        client.ensure_bucket()
+    except Exception as e:
+        logger.warning("MinIO no disponible para sembrar imagen default: %s", e)
+        return
+
+    try:
+        await asyncio.to_thread(client.download_bytes, "courses/images/default.png")
+        logger.info("Imagen default de cursos ya existe en MinIO")
+        return
+    except Exception:
+        pass
+
+    local_path = Path(__file__).resolve().parent / "static" / "images" / "default-course-image.png"
+    if not local_path.exists():
+        logger.warning("Archivo local de imagen default no encontrado en %s", local_path)
+        return
+
+    with open(local_path, "rb") as f:
+        data = f.read()
+
+    try:
+        await asyncio.to_thread(
+            client.upload_bytes,
+            "courses/images/default.png",
+            data,
+            content_type="image/png",
+        )
+        logger.info("Imagen default de cursos subida a MinIO")
+    except Exception as e:
+        logger.warning("No se pudo subir la imagen default a MinIO: %s", e)
+
+
 @asynccontextmanager
 async def lifespan(_app: FastAPI):
     await create_database_if_not_exists()
@@ -149,6 +190,7 @@ async def lifespan(_app: FastAPI):
         await conn.run_sync(Base.metadata.create_all)
     await _seed_superuser()
     await _seed_system_bot()
+    await _seed_default_course_image()
     yield
     await engine.dispose()
 

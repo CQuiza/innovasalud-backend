@@ -92,8 +92,7 @@ class CertificatePdfService:
         issued_at = _issued_date(cert)
         uid = str(cert.unique_id)
         base = settings.base_url.rstrip("/")
-        api = settings.api_v1_prefix.rstrip("/")
-        verify_url = f"{base}{api}/certificates/view/{uid}"
+        verify_url = f"{base}/search?identity={student.identity_number}"
         validity_years = ct.validity_value if ct.validity_type == "years" else None
         pdf_bytes, _ = self.generate(
             student, ct, issued_at, verify_url, settings,
