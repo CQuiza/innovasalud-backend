@@ -76,3 +76,10 @@ ALTER TABLE users DROP CONSTRAINT IF EXISTS ck_users_identity_type;
 
 ALTER TABLE users ADD CONSTRAINT ck_users_identity_type
     CHECK (identity_type IN ('CC', 'TI', 'CE', 'PPT', 'PASSPORT', 'OTHER'));
+
+-- ============================================================
+-- Migración 016: Agregar preset_image a courses
+-- ============================================================
+
+ALTER TABLE courses
+    ADD COLUMN IF NOT EXISTS preset_image VARCHAR(50) NULL;

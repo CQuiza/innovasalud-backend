@@ -76,6 +76,7 @@ async def create_course(
         certificate_type_id=body.certificate_type_id,
         teacher_id=body.teacher_id,
         status=body.status.value,
+        preset_image=body.preset_image,
     )
 
 
@@ -94,6 +95,8 @@ async def update_course(
     payload = body.model_dump(exclude_unset=True)
     if "status" in payload and payload["status"] is not None:
         payload["status"] = payload["status"].value
+    if "preset_image" in payload and payload["preset_image"] is not None:
+        payload["image_url"] = None
     return await course_repository.update(db, c, payload)
 
 
@@ -162,7 +165,7 @@ async def upload_course_image(
         except Exception:
             pass
 
-    return await course_repository.update(db, c, {"image_url": object_name})
+    return await course_repository.update(db, c, {"image_url": object_name, "preset_image": None})
 
 
 @router.get("/{course_id}/image")
@@ -173,6 +176,9 @@ async def get_course_image(
     c = await course_repository.get_by_id(db, course_id)
     if not c:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Curso no encontrado")
+
+    if c.preset_image:
+        return Response(status_code=status.HTTP_204_NO_CONTENT)
 
     settings = get_settings()
     client = get_minio_client(settings)
@@ -228,4 +234,4 @@ async def delete_course_image(
     except Exception:
         pass
 
-    return await course_repository.update(db, c, {"image_url": None})
+    return await course_repository.update(db, c, {"image_url": None, "preset_image": None})

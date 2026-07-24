@@ -13,6 +13,7 @@ class CourseCreate(BaseModel):
     certificate_type_id: int | None = None
     teacher_id: int | None = None
     status: CourseStatus = CourseStatus.draft
+    preset_image: str | None = None
 
 
 class CourseUpdate(BaseModel):
@@ -21,6 +22,7 @@ class CourseUpdate(BaseModel):
     certificate_type_id: int | None = None
     teacher_id: int | None = None
     status: CourseStatus | None = None
+    preset_image: str | None = None
 
     model_config = ConfigDict(extra="forbid")
 
@@ -31,6 +33,7 @@ class CourseRead(BaseModel):
     description: str | None
     certificate_type_id: int | None
     teacher_id: int | None
+    preset_image: str | None = None
     image_url: str | None = None
     created_at: datetime
     updated_at: datetime
@@ -45,6 +48,7 @@ class CoursePublicRead(BaseModel):
     id: int
     title: str
     description: str | None
+    preset_image: str | None = None
     image_url: str | None = None
     status: CourseStatus
 

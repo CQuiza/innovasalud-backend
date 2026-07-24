@@ -54,6 +54,7 @@ class Course(Base):
         server_default=func.now(),
         onupdate=func.now(),
     )
+    preset_image: Mapped[str | None] = mapped_column(String(50), nullable=True)
     image_url: Mapped[str | None] = mapped_column(String(512), nullable=True)
 
     status: Mapped[str] = mapped_column(
