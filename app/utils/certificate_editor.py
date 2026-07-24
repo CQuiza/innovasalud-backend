@@ -62,13 +62,15 @@ _CERT_KIND_ES = {
 
 def _identity_phrase(identity_type: str, identity_number: str) -> str:
     t = (identity_type or "").upper().strip()
-    if t == "CC":
-        kind = "cédula de ciudadanía"
-    elif t == "TI":
-        kind = "tarjeta de identidad"
-    else:
-        kind = "documento de identidad"
-    return f"Identificado con {kind} No. {identity_number}"
+    _MAP = {
+        "CC": "CÉDULA DE CIUDADANÍA",
+        "TI": "TARJETA DE IDENTIDAD",
+        "CE": "CÉDULA DE EXTRANJERÍA",
+        "PPT": "PPT",
+        "PASSPORT": "PASAPORTE",
+    }
+    kind = _MAP.get(t, "DOCUMENTO DE IDENTIDAD")
+    return f"IDENTIFICADO CON {kind} No. {identity_number}"
 
 
 def _legal_paragraph_text(issued_on: date) -> str:

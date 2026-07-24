@@ -1,6 +1,7 @@
 """Tareas de lecciones."""
 
 import asyncio
+import mimetypes
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Query, UploadFile, status
@@ -193,6 +194,7 @@ async def download_task_file(
     task_id: int,
     db: Annotated[AsyncSession, Depends(get_db)],
     current: Annotated[User, Depends(get_current_user)],
+    download: Annotated[bool, Query()] = False,
 ) -> Response:
     task = await lesson_task_repository.get_by_id(db, task_id)
     if not task:
@@ -233,10 +235,12 @@ async def download_task_file(
         )
 
     filename = task.original_filename or (task.file_url.rsplit("/", 1)[-1] if "/" in task.file_url else "file")
+    mime_type, _ = mimetypes.guess_type(filename)
+    disposition = "attachment" if download else "inline"
     return Response(
         content=data,
-        media_type="application/octet-stream",
+        media_type=mime_type or "application/octet-stream",
         headers={
-            "Content-Disposition": f'attachment; filename="{filename}"',
+            "Content-Disposition": f'{disposition}; filename="{filename}"',
         },
     )

@@ -7,7 +7,7 @@ CREATE TABLE users (
     first_last_name VARCHAR(255) NOT NULL, -- actualizable
     second_last_name VARCHAR(255), -- actualizable
     role VARCHAR(50) CHECK (role IN ('superuser', 'admin', 'teacher', 'student')) NOT NULL, -- actualizable
-    identity_type VARCHAR(50) CHECK (identity_type IN ('CC', 'TI', 'OTHER')) NOT NULL, -- actualizable
+    identity_type VARCHAR(50) CHECK (identity_type IN ('CC', 'TI', 'CE', 'PPT', 'PASSPORT', 'OTHER')) NOT NULL, -- actualizable
     identity_number VARCHAR(50) UNIQUE NOT NULL,    -- actualizable
     phone_number VARCHAR(20) UNIQUE NOT NULL, -- actualizable
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,

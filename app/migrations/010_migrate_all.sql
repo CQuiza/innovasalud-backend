@@ -67,3 +67,12 @@ CREATE TABLE IF NOT EXISTS email_audit (
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     sent_at TIMESTAMPTZ
 );
+
+-- ============================================================
+-- Migración 015: Ampliar tipos de identidad
+-- ============================================================
+
+ALTER TABLE users DROP CONSTRAINT IF EXISTS ck_users_identity_type;
+
+ALTER TABLE users ADD CONSTRAINT ck_users_identity_type
+    CHECK (identity_type IN ('CC', 'TI', 'CE', 'PPT', 'PASSPORT', 'OTHER'));
