@@ -24,17 +24,17 @@ from app.services.datetime_utils import number_to_spanish_years_text
 # --- Coordenadas (origen abajo-izquierda, puntos PDF). Plantilla ~842.5 x 595.5 (horizontal). ---
 # Ajustar midiendo contra app/templates/certificate_reference.pdf
 _LAYOUT = {
-    "student_name_y": 345.82,
-    "identity_y": 322.20,
-    "course_line_y": 298.58,
-    "cert_name_y": 272.23,
-    "hours_y": 240.60,
-    "legal_top_y": 228.0,
+    "student_name_y": 305.82,
+    "identity_y": 282.20,
+    "course_line_y": 258.58,
+    "cert_name_y": 232.23,
+    "hours_y": 200.60,
+    "legal_top_y": 188.0,
     "legal_max_width": 720.0,
     "legal_margin_x": 61.0,
-    "qr_from_right": 670.0,
-    "qr_from_bottom": 90.0,
-    "qr_max_side": 80.0,
+    "qr_from_right": 64.0,
+    "qr_from_bottom": 80.0,
+    "qr_max_side": 100.0,
     "validated_y": 60.0,
 }
 
@@ -54,9 +54,9 @@ _MESES_ES = (
 )
 
 _CERT_KIND_ES = {
-    "basic": "BÁSICO",
-    "advanced": "AVANZADO",
-    "diploma": "DIPLOMADO",
+    "basic": "Básico",
+    "advanced": "Avanzado",
+    "diploma": "Diplomado",
 }
 
 
@@ -78,10 +78,10 @@ def _legal_paragraph_text(issued_on: date) -> str:
     month = _MESES_ES[issued_on.month - 1]
     year = issued_on.year
     return (
-        f"Este certificado es expedido en la ciudad de Neiva a los {day} días "
-        f"del mes de {month} del {year}, y se expide mediante el marco normativo de la "
-        "educación informal y no conduce a título alguno o "
-        "certificación de aptitud ocupacional."
+        f"ESTE CERTIFICADO ES EXPEDIDO EN LA CIUDAD DE NEIVA A LOS {day} DÍAS "
+        f"DEL MES DE {month} DEL {year}, LA PRESENTE CERTIFICACIÓN SE EXPIDE MEDIANTE "
+        "EL MARCO NORMATIVO PARA LA EDUCACIÓN INFORMAL Y NO CONDUCE A TITULO ALGUNO O "
+        "CERTIFICACIÓN DE APTITUD OCUPACIONAL."
     )
 
 
@@ -284,27 +284,26 @@ class CertificateEditor:
         buf = BytesIO()
         c = rl_canvas.Canvas(buf, pagesize=(w_pt, h_pt))
         cx = w_pt / 2.0
-        blue = HexColor("#00A8E9")
-        navy = HexColor("#0D2B49")
+        lightblue = HexColor("#36A9E1")
+        navy = HexColor("#000066")
         black = HexColor("#000000")
-        gray = HexColor("#565656")
 
         kind_es = _CERT_KIND_ES.get(
             (data.certificate_type_kind or "").lower(),
             data.certificate_type_kind or "",
         )
-        course_line = f"ASISTIÓ AL CURSO {kind_es}:"
+        course_line = f"Asistió al curso {kind_es}:"
 
         # Nombre estudiante
         c.setFont(f_treb_bold, 32.5)
-        c.setFillColor(black)
+        c.setFillColor(lightblue)
         c.drawCentredString(
             cx, _LAYOUT["student_name_y"], (data.student_full_name)
         )
 
         # Identidad
         c.setFont(f_tahoma, 17)
-        c.setFillColor(black)
+        c.setFillColor(lightblue)
         c.drawCentredString(
             cx,
             _LAYOUT["identity_y"],
@@ -313,17 +312,19 @@ class CertificateEditor:
 
         # Curso / tipo
         c.setFont(f_cambria_bold, 18)
-        c.setFillColor(black)
+        c.setFillColor(navy)
         c.drawCentredString(cx, _LAYOUT["course_line_y"], course_line)
 
         # Nombre certificado
         c.setFont(f_tahoma_bold, 17)
+        c.setFillColor(navy)
         c.drawCentredString(
             cx, _LAYOUT["cert_name_y"], (data.certificate_type_name).upper()
         )
 
         # Horas
         c.setFont(f_cambria, 17)
+        c.setFillColor(navy)
         c.drawCentredString(
             cx,
             _LAYOUT["hours_y"],
@@ -337,7 +338,7 @@ class CertificateEditor:
             fontName=f_tahoma,
             fontSize=11,
             leading=11,
-            textColor=black,
+            textColor=navy,
             alignment=TA_CENTER,
         )
         para = Paragraph(legal.replace("\n", "<br/>"), style)
@@ -351,7 +352,7 @@ class CertificateEditor:
         # QR
         qr_png.seek(0)
         ir = ImageReader(qr_png)
-        side = min(_LAYOUT["qr_max_side"], h_pt * 0.22, w_pt * 0.18)
+        side = min(_LAYOUT["qr_max_side"], h_pt * 0.22, w_pt * 0.18) * 0.7
         qx = w_pt - _LAYOUT["qr_from_right"] - side
         qy = _LAYOUT["qr_from_bottom"]
         c.drawImage(ir, qx, qy, width=side, height=side, mask="auto")
