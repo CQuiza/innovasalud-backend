@@ -74,7 +74,7 @@ class UserRepository:
                 | User.email.ilike(like)
                 | User.identity_number.ilike(like)
             )
-        q = q.offset(skip).limit(limit).order_by(User.id)
+        q = q.offset(skip).limit(limit).order_by(User.id.desc())
         r = await db.execute(q)
         return r.scalars().all()
 

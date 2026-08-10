@@ -46,8 +46,17 @@ async def list_certificates(
     search: Annotated[str | None, Query()] = None,
 ) -> CertificateListResponse:
     if current.role == UserRole.student.value:
-        total = await certificate_repository.count_by_user(db, current.id, search=search)
-        rows = await certificate_repository.list_by_user(db, current.id, skip=skip, limit=limit, search=search)
+        visible_statuses = [
+            CertificateStatus.active.value,
+            CertificateStatus.expired.value,
+        ]
+        total = await certificate_repository.count_by_user(
+            db, current.id, search=search, statuses=visible_statuses
+        )
+        rows = await certificate_repository.list_by_user(
+            db, current.id, skip=skip, limit=limit, search=search,
+            statuses=visible_statuses,
+        )
         return CertificateListResponse(items=list(rows), total=total)
     uid = user_id
     if uid is None:
