@@ -192,7 +192,7 @@ async def create_certificate(
     background_tasks: BackgroundTasks,
 ) -> object:
     try:
-        return await certificate_lifecycle.issue_certificate(
+        result = await certificate_lifecycle.issue_certificate(
             db,
             admin=current,
             user_id=body.user_id,
@@ -201,6 +201,8 @@ async def create_certificate(
             validity_extension=body.validity_extension,
             background_tasks=background_tasks,
         )
+        await db.commit()
+        return result
     except PermissionError as e:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=str(e))
     except ValueError as e:
@@ -233,6 +235,7 @@ async def batch_issue_certificates(
             issued.append(CertificateRead.model_validate(cert))
         except (PermissionError, ValueError, RuntimeError) as e:
             errors.append({"certificate_type_id": ct_id, "error": str(e)})
+    await db.commit()
     return {"issued": issued, "errors": errors}
 
 

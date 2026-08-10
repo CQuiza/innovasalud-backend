@@ -24,12 +24,13 @@ from app.services.datetime_utils import number_to_spanish_years_text
 # --- Coordenadas (origen abajo-izquierda, puntos PDF). Plantilla ~842.5 x 595.5 (horizontal). ---
 # Ajustar midiendo contra app/templates/certificate_reference.pdf
 _LAYOUT = {
-    "student_name_y": 305.82,
-    "identity_y": 282.20,
-    "course_line_y": 258.58,
-    "cert_name_y": 232.23,
-    "hours_y": 200.60,
-    "legal_top_y": 188.0,
+    "student_name_y": 315.82,
+    "identity_y": 292.20,
+    "course_line_y": 268.58,
+    "cert_name_y": 250.23,
+    "cert_max_width": 720.0,
+    "hours_y": 185.60,
+    "legal_top_y": 180.0,
     "legal_max_width": 720.0,
     "legal_margin_x": 61.0,
     "qr_from_right": 64.0,
@@ -295,7 +296,7 @@ class CertificateEditor:
         course_line = f"Asistió al curso {kind_es}:"
 
         # Nombre estudiante
-        c.setFont(f_treb_bold, 32.5)
+        c.setFont(f_treb_bold, 25.5)
         c.setFillColor(lightblue)
         c.drawCentredString(
             cx, _LAYOUT["student_name_y"], (data.student_full_name)
@@ -303,7 +304,7 @@ class CertificateEditor:
 
         # Identidad
         c.setFont(f_tahoma, 17)
-        c.setFillColor(lightblue)
+        c.setFillColor(navy)
         c.drawCentredString(
             cx,
             _LAYOUT["identity_y"],
@@ -316,11 +317,21 @@ class CertificateEditor:
         c.drawCentredString(cx, _LAYOUT["course_line_y"], course_line)
 
         # Nombre certificado
-        c.setFont(f_tahoma_bold, 17)
-        c.setFillColor(navy)
-        c.drawCentredString(
-            cx, _LAYOUT["cert_name_y"], (data.certificate_type_name).upper()
+        cert_name = html.escape(data.certificate_type_name.upper())
+        cert_style = ParagraphStyle(
+            name="cert_name",
+            fontName=f_tahoma_bold,
+            fontSize=17,
+            leading=20.4,
+            textColor=navy,
+            alignment=TA_CENTER,
+            wordWrap="CJK",
         )
+        cert_para = Paragraph(cert_name.replace("\n", "<br/>"), cert_style)
+        cw, ch = cert_para.wrap(_LAYOUT["cert_max_width"], 400.0)
+        x_para = (w_pt - cw) / 2.0
+        mid = (_LAYOUT["course_line_y"] + _LAYOUT["hours_y"]) / 2.0
+        cert_para.drawOn(c, x_para, mid - ch / 2.0)
 
         # Horas
         c.setFont(f_cambria, 17)
@@ -336,8 +347,8 @@ class CertificateEditor:
         style = ParagraphStyle(
             name="legal",
             fontName=f_tahoma,
-            fontSize=11,
-            leading=11,
+            fontSize=8.0,
+            leading=8.0,
             textColor=navy,
             alignment=TA_CENTER,
         )
