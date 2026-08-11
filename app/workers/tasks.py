@@ -12,7 +12,7 @@ from celery import shared_task
 from sqlalchemy import func, select
 from sqlalchemy.orm import selectinload
 
-from app.core.database import AsyncSessionLocal
+from app.core.database import AsyncWorkerSessionLocal
 from app.core.settings import get_settings
 from app.models import LessonTask  # noqa: F401 — asegura registro del mapper
 from app.models.certificate import Certificate
@@ -44,7 +44,7 @@ async def _async_check_expired_certificates():
     processed = 0
     errors = []
 
-    async with AsyncSessionLocal() as session:
+    async with AsyncWorkerSessionLocal() as session:
         await log_worker_action(
             session, task_name=task_name, status=WorkerStatus.running.value,
             started_at=started_at,
@@ -172,7 +172,7 @@ async def _async_backup_database_to_minio():
     ]
 
     try:
-        async with AsyncSessionLocal() as session:
+        async with AsyncWorkerSessionLocal() as session:
             try:
                 await log_worker_action(
                     session, task_name=task_name, status=WorkerStatus.running.value,
