@@ -14,6 +14,20 @@ logger = logging.getLogger(__name__)
 
 _TRACEBACK_MAX_LEN = 4000
 
+
+def _root_cause_message(exc: Exception) -> str:
+    """Devuelve el mensaje de la excepción original recorriendo la cadena __context__.
+
+    fastapi-mail enmascara el error real con una excepción secundaria (p. ej.
+    SMTPServerDisconnected tras un SMTPDataError 550). Este helper recupera el
+    primer error de la cadena para que la auditoría muestre la causa real.
+    """
+    current = exc
+    while getattr(current, "__context__", None) is not None:
+        current = current.__context__
+    return str(current) or str(exc)
+
+
 _mail_config: ConnectionConfig | None = None
 
 
@@ -131,7 +145,7 @@ async def send_credentials_with_audit(
         await send_credentials_email(email_to, password)
         status = EmailStatus.sent.value
     except Exception as e:
-        error_text = str(e)
+        error_text = _root_cause_message(e)
         traceback_text = traceback.format_exc()[:_TRACEBACK_MAX_LEN]
         logger.exception("Error en send_credentials_with_audit para %s", email_to)
 
@@ -170,7 +184,7 @@ async def send_issued_with_audit(
         )
         status = EmailStatus.sent.value
     except Exception as e:
-        error_text = str(e)
+        error_text = _root_cause_message(e)
         traceback_text = traceback.format_exc()[:_TRACEBACK_MAX_LEN]
         logger.exception("Error en send_issued_with_audit para %s", email_to)
 
@@ -205,7 +219,7 @@ async def send_expired_with_audit(
         await send_certificate_expired_email(email_to, student_name, certificate_uid)
         status = EmailStatus.sent.value
     except Exception as e:
-        error_text = str(e)
+        error_text = _root_cause_message(e)
         traceback_text = traceback.format_exc()[:_TRACEBACK_MAX_LEN]
         logger.exception("Error en send_expired_with_audit para %s", email_to)
 
