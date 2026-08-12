@@ -93,6 +93,7 @@ async def create_user(
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Solo un superusuario puede crear otro superusuario")
     try:
         u = await user_service.create_user(db, body, background_tasks=background_tasks, requesting_role=current.role)
+        await db.commit()
         logger.info("Usuario creado vía API — id=%s, email=%s, by=%s", u.id, u.email, current.email)
         return u
     except ValueError as e:
@@ -120,6 +121,7 @@ async def update_user(
     if u.role == UserRole.superuser.value and current.role != UserRole.superuser.value:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Solo un superusuario puede modificar a otro superusuario")
     updated = await user_service.update_user(db, u, body, requesting_role=current.role)
+    await db.commit()
     logger.info("Usuario actualizado vía API — id=%s, by=%s", updated.id, current.email)
     return updated
 
@@ -153,6 +155,7 @@ async def delete_user(
         )
     try:
         await user_service.delete_user(db, u, deleted_by=current.id)
+        await db.commit()
         logger.info("Usuario %s (id=%s) eliminado por %s", u.email, u.id, current.email)
         return {"message": f"Usuario {u.email} eliminado exitosamente."}
     except RuntimeError as e:

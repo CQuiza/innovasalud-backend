@@ -24,6 +24,7 @@ from app.schemas.certificate import (
     CertificateIssueRequest,
     CertificateListResponse,
     CertificateRead,
+    CertificateRenewRequest,
     CertificateSearchResult,
     CertificateUpdate,
 )
@@ -239,6 +240,7 @@ async def batch_issue_certificates(
                 user_id=body.user_id,
                 certificate_type_id=ct_id,
                 issued_at=body.issued_at,
+                validity_extension=body.validity_extension,
                 background_tasks=background_tasks,
             )
             issued.append(CertificateRead.model_validate(cert))
@@ -246,6 +248,40 @@ async def batch_issue_certificates(
             errors.append({"certificate_type_id": ct_id, "error": str(e)})
     await db.commit()
     return {"issued": issued, "errors": errors}
+
+
+@router.post("/{certificate_id}/renew", response_model=CertificateRead)
+async def renew_certificate(
+    certificate_id: int,
+    body: CertificateRenewRequest,
+    db: Annotated[AsyncSession, Depends(get_db)],
+    current: Annotated[User, Depends(get_current_user)],
+    background_tasks: BackgroundTasks,
+) -> object:
+    if not is_super_or_admin(current):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Solo administradores")
+    cert = await certificate_repository.get_by_id(db, certificate_id)
+    if not cert:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Certificado no encontrado"
+        )
+    try:
+        result = await certificate_lifecycle.renew_certificate(
+            db,
+            admin=current,
+            cert=cert,
+            issued_at=body.issued_at,
+            validity_extension=body.validity_extension,
+            background_tasks=background_tasks,
+        )
+        await db.commit()
+        return result
+    except PermissionError as e:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=str(e))
+    except ValueError as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+    except RuntimeError as e:
+        raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail=str(e))
 
 
 @router.patch("/{certificate_id}", response_model=CertificateRead)
