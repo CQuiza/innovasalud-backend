@@ -46,6 +46,7 @@ class CertificateLifecycleService:
         certificate_type_id: int,
         issued_at: datetime | None = None,
         validity_extension: int | None = None,
+        hours: int | None = None,
         background_tasks=None,
     ):
         """Crea certificado, genera PDF, sube a MinIO, audita y notifica."""
@@ -107,6 +108,7 @@ class CertificateLifecycleService:
         pdf_bytes, qr_bytes = self._pdf.generate(
             student, ct, issued_at, verify_url, settings,
             validity_years=validity_years,
+            hours=hours,
         )
         await self._storage.upload_certificate_files(uid, pdf_bytes, qr_bytes)
 
@@ -214,6 +216,7 @@ class CertificateLifecycleService:
         cert: Certificate,
         issued_at: datetime | None = None,
         validity_extension: int | None = None,
+        hours: int | None = None,
         background_tasks=None,
     ) -> Certificate:
         """Renueva un certificado: emite uno nuevo y revoca el actual."""
@@ -232,6 +235,7 @@ class CertificateLifecycleService:
             certificate_type_id=cert.certificate_type_id,
             issued_at=issued_at,
             validity_extension=validity_extension,
+            hours=hours,
             background_tasks=background_tasks,
         )
         await self.revoke_certificate(db, admin=admin, cert=cert)

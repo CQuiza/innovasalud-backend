@@ -29,6 +29,9 @@ class CertificateIssueRequest(BaseModel):
     validity_extension: int | None = Field(
         default=None, description="Sobreescribe la vigencia del tipo (en años)"
     )
+    hours: int | None = Field(
+        default=None, ge=0, description="Sobreescribe la intensidad horaria para este certificado (efímero, no persiste)"
+    )
 
 
 class CertificateUpdate(BaseModel):
@@ -72,6 +75,9 @@ class CertificateBatchIssueRequest(BaseModel):
     validity_extension: int | None = Field(
         default=None, description="Sobreescribe la vigencia del tipo (en años); aplica a la emisión de un único tipo"
     )
+    hours: int | None = Field(
+        default=None, ge=0, description="Sobreescribe la intensidad horaria (efímero, no persiste); aplica a la emisión de un único tipo"
+    )
 
 
 class CertificateRenewRequest(BaseModel):
@@ -82,6 +88,9 @@ class CertificateRenewRequest(BaseModel):
     )
     validity_extension: int | None = Field(
         default=None, description="Sobreescribe la vigencia del tipo (en años, default: vigencia original)"
+    )
+    hours: int | None = Field(
+        default=None, ge=0, description="Sobreescribe la intensidad horaria para el certificado renovado (efímero, no persiste)"
     )
 
 

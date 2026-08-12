@@ -48,6 +48,7 @@ class CertificatePdfService:
         verify_url: str,
         settings: Settings,
         validity_years: int | None = None,
+        hours: int | None = None,
     ) -> tuple[bytes, bytes]:
         """Construye PDF + QR y devuelve (pdf_bytes, qr_bytes)."""
         logger.info("Generando PDF — student=%s, ct=%s", student.email, certificate_type.name)
@@ -63,7 +64,7 @@ class CertificatePdfService:
             identity_number=student.identity_number,
             certificate_type_kind=certificate_type.type,
             certificate_type_name=certificate_type.name,
-            hours=certificate_type.hours,
+            hours=hours if hours is not None else certificate_type.hours,
             validity_years=validity_years,
         )
         pdf_io = editor.build_merged_pdf(overlay, qr_io)
