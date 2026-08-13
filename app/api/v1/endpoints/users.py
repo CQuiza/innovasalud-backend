@@ -19,10 +19,12 @@ from app.schemas.user import (
     UserListResponse,
     UserRead,
     UserUpdate,
+    UserUpdateResponse,
     UserWithCertificatesListResponse,
     UserWithCertificatesRead,
 )
 from app.services.access import is_super_or_admin
+from app.services.certificate_lifecycle import certificate_lifecycle
 from app.services.user_service import user_service
 
 router = APIRouter(prefix="/users", tags=["users"])
@@ -101,7 +103,7 @@ async def create_user(
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
 
-@router.patch("/{user_id}", response_model=UserRead)
+@router.patch("/{user_id}", response_model=UserUpdateResponse)
 async def update_user(
     user_id: int,
     body: UserUpdate,
@@ -121,9 +123,20 @@ async def update_user(
     if u.role == UserRole.superuser.value and current.role != UserRole.superuser.value:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Solo un superusuario puede modificar a otro superusuario")
     updated = await user_service.update_user(db, u, body, requesting_role=current.role)
+
+    certificates_regenerated = 0
+    changed = set(body.model_dump(exclude_unset=True))
+    identity_fields = {"name", "first_last_name", "second_last_name", "identity_number", "identity_type"}
+    if changed & identity_fields:
+        certificates_regenerated = await certificate_lifecycle.reproduce_active_for_student(
+            db, student_id=updated.id, admin=current
+        )
+
     await db.commit()
-    logger.info("Usuario actualizado vía API — id=%s, by=%s", updated.id, current.email)
-    return updated
+    response = UserUpdateResponse.model_validate(updated)
+    response.certificates_regenerated = certificates_regenerated
+    logger.info("Usuario actualizado — id=%s, by=%s, certs_reproduced=%s", updated.id, current.email, certificates_regenerated)
+    return response
 
 
 @router.delete("/{user_id}", status_code=status.HTTP_200_OK)

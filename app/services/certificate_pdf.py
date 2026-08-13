@@ -94,10 +94,16 @@ class CertificatePdfService:
         uid = str(cert.unique_id)
         base = settings.base_url.rstrip("/")
         verify_url = f"{base}/search?identity={student.identity_number}"
-        validity_years = ct.validity_value if ct.validity_type == "years" else None
+        hours = cert.hours if cert.hours is not None else ct.hours
+        validity_years = None
+        if cert.validity_years is not None:
+            validity_years = cert.validity_years
+        elif ct.validity_type == "years":
+            validity_years = ct.validity_value
         pdf_bytes, _ = self.generate(
             student, ct, issued_at, verify_url, settings,
             validity_years=validity_years,
+            hours=hours,
         )
         logger.info("PDF regenerado — uid=%s, size=%s", str(cert.unique_id), len(pdf_bytes))
         return pdf_bytes

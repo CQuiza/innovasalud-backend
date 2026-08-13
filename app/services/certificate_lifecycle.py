@@ -101,6 +101,10 @@ class CertificateLifecycleService:
         uid = str(cert.unique_id)
         cert.pdf_url = f"{base}{api}/certificates/view/{uid}"
         cert.qr_code_url = f"{base}{api}/certificates/view/{uid}/qr"
+        if hours is not None:
+            cert.hours = hours
+        if validity_extension is not None:
+            cert.validity_years = validity_extension
         await db.flush()
         await db.refresh(cert)
 
@@ -219,7 +223,12 @@ class CertificateLifecycleService:
         hours: int | None = None,
         background_tasks=None,
     ) -> Certificate:
-        """Renueva un certificado: emite uno nuevo y revoca el actual."""
+        """Renueva un certificado como reemplazo EN SU LUGAR (misma UUID), sin revocar.
+
+        Actualiza fecha de emisión, vigencia e intensidad horaria (override o default
+        del tipo) y regenera el PDF sobre el mismo objeto. El certificado original
+        nunca pasa a 'revoked' ni se marca con agua.
+        """
         if cert.status not in (
             CertificateStatus.active.value,
             CertificateStatus.expired.value,
@@ -228,18 +237,97 @@ class CertificateLifecycleService:
         if cert.user_id is None or cert.certificate_type_id is None:
             raise ValueError("El certificado no tiene usuario o tipo asociado")
 
-        new_cert = await self.issue_certificate(
-            db,
-            admin=admin,
-            user_id=cert.user_id,
-            certificate_type_id=cert.certificate_type_id,
-            issued_at=issued_at,
-            validity_extension=validity_extension,
-            hours=hours,
-            background_tasks=background_tasks,
+        ct = await certificate_type_repository.get_by_id(db, cert.certificate_type_id)
+        if not ct:
+            raise ValueError("Tipo de certificado no existe")
+
+        if issued_at is not None:
+            if issued_at.tzinfo is None:
+                issued_at = issued_at.replace(tzinfo=UTC)
+        else:
+            issued_at = datetime.now(UTC)
+
+        vt = ct.validity_type
+        vv = ct.validity_value
+        if validity_extension is not None:
+            vt = "years"
+            vv = validity_extension
+        expires_at = compute_certificate_expires_at(issued_at, vt, vv)
+
+        cert.issued_at = issued_at
+        cert.expires_at = expires_at
+        if hours is not None:
+            cert.hours = hours
+        if validity_extension is not None:
+            cert.validity_years = validity_extension
+        await db.flush()
+        await db.refresh(cert)
+
+        uid = str(cert.unique_id)
+        pdf_bytes = await self._pdf.regenerate(db, cert)
+        await self._storage.upload_pdf(uid, pdf_bytes)
+
+        db.add(
+            CertificateAudit(
+                certificate_id=cert.id,
+                certificate_unique_id=cert.unique_id,
+                action=CertificateAuditAction.renewed.value,
+                performed_by=admin.id,
+            )
         )
-        await self.revoke_certificate(db, admin=admin, cert=cert)
-        return new_cert
+        await db.flush()
+
+        student = await user_repository.get_by_id(db, cert.user_id)
+        if student and background_tasks:
+            settings = get_settings()
+            base = settings.base_url.rstrip("/")
+            api = settings.api_v1_prefix.rstrip("/")
+            self._notification.notify_issued(
+                student.email,
+                student_display_name(student),
+                uid,
+                base,
+                api,
+                background_tasks,
+            )
+
+        logger.info("Certificado renovado (en su lugar) — uid=%s, ct=%s",
+                     uid, ct.name)
+        return cert
+
+    async def reproduce_active_for_student(
+        self,
+        db: AsyncSession,
+        *,
+        student_id: int,
+        admin: User,
+    ) -> int:
+        """Reproduce los PDFs de los certificados ACTIVOS del estudiante con sus datos actuales.
+
+        Regenera en su lugar (misma UUID, mismas fechas/status) y audita 'reproduced'.
+        Se usa al actualizar nombre o datos de identidad del estudiante.
+        """
+        certs = await certificate_repository.list_by_user(
+            db, student_id, statuses=[CertificateStatus.active.value]
+        )
+        count = 0
+        for cert in certs:
+            uid = str(cert.unique_id)
+            pdf_bytes = await self._pdf.regenerate(db, cert)
+            await self._storage.upload_pdf(uid, pdf_bytes)
+            db.add(
+                CertificateAudit(
+                    certificate_id=cert.id,
+                    certificate_unique_id=cert.unique_id,
+                    action=CertificateAuditAction.reproduced.value,
+                    performed_by=admin.id,
+                )
+            )
+            await db.flush()
+            count += 1
+        if count:
+            logger.info("Certificados reproducidos — student_id=%s, count=%s", student_id, count)
+        return count
 
     async def update_certificate_fields(
         self,
