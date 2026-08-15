@@ -27,30 +27,50 @@ def _normalize_minio_endpoint(endpoint: str) -> str:
 
 
 class MinioClient:
-    """Encapsula el SDK `minio` para el bucket configurado en settings."""
+    """Encapsula el SDK `minio` para el bucket configurado en settings.
 
-    def __init__(self, settings: Settings | None = None) -> None:
-        self._settings = settings or get_settings()
+    Acepta overrides opcionales (p. ej. un MinIO de backup externo): si se
+    pasan, tienen prioridad sobre los valores de settings para endpoint,
+    credenciales, bucket, secure y region.
+    """
+
+    def __init__(
+        self,
+        settings: Settings | None = None,
+        *,
+        endpoint: str | None = None,
+        access_key: str | None = None,
+        secret_key: str | None = None,
+        bucket: str | None = None,
+        secure: bool | None = None,
+        region: str | None = None,
+    ) -> None:
+        s = settings or get_settings()
+        self._settings = s
+        self._endpoint = endpoint if endpoint is not None else s.minio_endpoint
+        self._access_key = access_key if access_key is not None else s.minio_access_key
+        self._secret_key = secret_key if secret_key is not None else s.minio_secret_key
+        self._bucket = bucket if bucket is not None else s.minio_bucket
+        self._secure = secure if secure is not None else s.minio_secure
+        self._region = region if region is not None else s.minio_region
         self._client: Minio | None = None
 
     @property
     def bucket(self) -> str:
-        return self._settings.minio_bucket
+        return self._bucket
 
     @property
     def client(self) -> Minio:
         if self._client is None:
-            s = self._settings
-            if not s.minio_access_key or not s.minio_secret_key:
+            if not self._access_key or not self._secret_key:
                 msg = "Defina MINIO_ACCESS_KEY y MINIO_SECRET_KEY para usar MinIO"
                 raise ValueError(msg)
-            region = s.minio_region or _DEFAULT_REGION
             self._client = Minio(
-                _normalize_minio_endpoint(s.minio_endpoint),
-                access_key=s.minio_access_key,
-                secret_key=s.minio_secret_key,
-                secure=s.minio_secure,
-                region=region,
+                _normalize_minio_endpoint(self._endpoint),
+                access_key=self._access_key,
+                secret_key=self._secret_key,
+                secure=self._secure,
+                region=self._region or _DEFAULT_REGION,
             )
         return self._client
 
@@ -126,3 +146,19 @@ class MinioClient:
 
 def get_minio_client(settings: Settings | None = None) -> MinioClient:
     return MinioClient(settings=settings)
+
+
+def get_backup_minio_client(settings: Settings | None = None) -> MinioClient | None:
+    """Devuelve un cliente hacia el MinIO de backup externo, o None si no está configurado."""
+    s = settings or get_settings()
+    if not s.minio_backup_access_key or not s.minio_backup_secret_key:
+        return None
+    return MinioClient(
+        s,
+        endpoint=s.minio_backup_endpoint,
+        access_key=s.minio_backup_access_key,
+        secret_key=s.minio_backup_secret_key,
+        bucket=s.minio_backup_bucket,
+        secure=s.minio_backup_secure,
+        region=s.minio_backup_region,
+    )

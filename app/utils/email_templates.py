@@ -51,3 +51,28 @@ def expired_body(app_name: str, student_name: str) -> str:
     <p>Si deseas obtener un nuevo certificado, por favor contacta al administrador.</p>
 </body>
 </html>"""
+
+
+def backup_body(
+    app_name: str,
+    *,
+    filename: str,
+    size_bytes: int,
+    uploaded: bool,
+    extra: str | None = None,
+) -> str:
+    size_mb = size_bytes / (1024 * 1024)
+    destino = "MinIO externo (backup)" if uploaded else "adjunto a este correo"
+    status_html = "OK" if uploaded else "FALLIDO"
+    color = "#198754" if uploaded else "#dc3545"
+    extra_html = f"<p>{extra}</p>" if extra else ""
+    return f"""<html>
+<body style="font-family: Arial, sans-serif; padding: 20px;">
+    <h2>Backup de base de datos — {app_name}</h2>
+    <p style="color:{color}; font-weight: bold;">Estado: {status_html}</p>
+    <p><strong>Archivo:</strong> {filename}</p>
+    <p><strong>Tamaño:</strong> {size_mb:.2f} MB</p>
+    <p><strong>Destino:</strong> {destino}</p>
+    {extra_html}
+</body>
+</html>"""

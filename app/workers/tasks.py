@@ -22,8 +22,8 @@ from app.models.enums import CertificateStatus, CertificateAuditAction, EmailSta
 from app.repositories.user_repository import user_repository
 from app.services.certificate_storage import CertificateStorageService
 from app.utils.certificate_editor import apply_revoked_watermark_pdf
-from app.utils.minio_client import get_minio_client
-from app.utils.email import send_certificate_expired_email
+from app.utils.email import send_backup_email_with_audit, send_certificate_expired_email
+from app.utils.minio_client import get_backup_minio_client
 from app.utils.worker_audit import log_worker_action
 
 logger = logging.getLogger(__name__)
@@ -184,26 +184,55 @@ async def _async_backup_database_to_minio():
                 subprocess.run(cmd, env=env, check=True, capture_output=True)
                 logger.info("pg_dump completado para %s", filename)
 
-                minio_client = get_minio_client(settings)
-                minio_client.ensure_bucket()
-
-                object_name = f"{settings.minio_path_backup_db.strip('/')}/{filename}"
-
-                minio_client.client.fput_object(
-                    minio_client.bucket,
-                    object_name,
-                    filepath,
-                    metadata={
-                        "backup_created_at": started_at.isoformat(),
-                        "backup_filename": filename,
-                    },
-                )
-
                 file_size = os.path.getsize(filepath) if os.path.exists(filepath) else 0
+                email_to = settings.backup_email_to or settings.superuser_email
 
-                status = WorkerStatus.success.value
-                details = f"Backup {filename} subido a MinIO ({file_size} bytes)"
-                logger.info(details)
+                backup_client = get_backup_minio_client(settings)
+                uploaded = False
+                upload_error: str | None = None
+
+                if backup_client is None:
+                    upload_error = "MinIO de backup no configurado (MINIO_BACKUP_ACCESS_KEY/SECRET_KEY)"
+                    logger.warning(upload_error)
+                else:
+                    try:
+                        backup_client.ensure_bucket()
+                        object_name = f"{settings.minio_backup_path_db.strip('/')}/{filename}"
+                        backup_client.client.fput_object(
+                            backup_client.bucket,
+                            object_name,
+                            filepath,
+                            metadata={
+                                "backup_created_at": started_at.isoformat(),
+                                "backup_filename": filename,
+                            },
+                        )
+                        uploaded = True
+                        details = f"Backup {filename} subido a MinIO externo ({file_size} bytes)"
+                        logger.info(details)
+                    except Exception as e:
+                        upload_error = f"{e}"
+                        logger.exception("Error subiendo backup al MinIO externo — %s", filename)
+
+                email_sent = await send_backup_email_with_audit(
+                    session,
+                    email_to=email_to,
+                    filename=filename,
+                    size_bytes=file_size,
+                    uploaded=uploaded,
+                    attachment_path=filepath if not uploaded else None,
+                    extra=upload_error,
+                )
+                await session.flush()
+
+                if uploaded:
+                    status = WorkerStatus.success.value
+                else:
+                    status = WorkerStatus.failed.value
+                    details = f"Error en backup: {upload_error}" + (
+                        f" | correo de fallback enviado" if email_sent else " | correo de fallback NO enviado"
+                    )
+                    logger.error(details)
 
             except subprocess.CalledProcessError as e:
                 detail_str = e.stderr.decode("utf-8", errors="replace")

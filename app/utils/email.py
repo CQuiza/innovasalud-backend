@@ -1,6 +1,7 @@
 """Envío de correos electrónicos usando fastapi-mail."""
 
 import logging
+import os
 import traceback
 from datetime import datetime, timezone
 
@@ -8,11 +9,12 @@ from fastapi_mail import ConnectionConfig, FastMail, MessageSchema
 
 from app.core.settings import get_settings
 from app.models.enums import EmailStatus
-from app.utils.email_templates import credentials_body, expired_body, issued_body
+from app.utils.email_templates import credentials_body, expired_body, issued_body, backup_body
 
 logger = logging.getLogger(__name__)
 
 _TRACEBACK_MAX_LEN = 4000
+_BACKUP_ATTACHMENT_MAX_MB = 18
 
 
 def _root_cause_message(exc: Exception) -> str:
@@ -128,8 +130,14 @@ async def send_certificate_expired_email(
 
 # ── Wrappers con auditoría para BackgroundTasks ──────────────
 
-from app.core.database import AsyncSessionLocal
+from app.core.database import AsyncSessionLocal, AsyncWorkerSessionLocal
 from app.models.email_audit import EmailAudit
+from app.utils.email_templates import (
+    credentials_body,
+    expired_body,
+    issued_body,
+    backup_body,
+)
 
 
 async def send_credentials_with_audit(
@@ -238,3 +246,86 @@ async def send_expired_with_audit(
             sent_at=datetime.now(timezone.utc) if status == EmailStatus.sent.value else None,
         ))
         await session.commit()
+
+
+async def send_backup_email_with_audit(
+    session,
+    *,
+    email_to: str,
+    filename: str,
+    size_bytes: int,
+    uploaded: bool,
+    attachment_path: str | None = None,
+    extra: str | None = None,
+) -> bool:
+    """Envía notificación/fallback de backup y registra el resultado en email_audit.
+
+    Usa la misma sesión (AsyncWorkerSessionLocal) que invoca la tarea del worker
+    para evitar sesiones cross-event-loop. Devuelve True si el correo se envió.
+    """
+    status = EmailStatus.failed.value
+    error_text: str | None = None
+    traceback_text: str | None = None
+    sent = False
+    attach_sent = False
+
+    try:
+        conf = _get_mail_config()
+        if conf is None:
+            raise RuntimeError("SMTP no configurado")
+
+        settings = get_settings()
+        app_name = settings.project_name
+
+        attachments = []
+        if attachment_path and os.path.isfile(attachment_path) and os.access(attachment_path, os.R_OK):
+            size = os.path.getsize(attachment_path)
+            if size <= _BACKUP_ATTACHMENT_MAX_MB * 1024 * 1024:
+                attachments.append(attachment_path)
+                attach_sent = True
+            else:
+                extra = f"{extra} — " if extra else ""
+                extra = f"{extra}adjunto omitido: supera {_BACKUP_ATTACHMENT_MAX_MB} MB"
+
+        message = MessageSchema(
+            subject=f"Backup de base de datos — {app_name}",
+            recipients=[email_to],
+            body=backup_body(
+                app_name,
+                filename=filename,
+                size_bytes=size_bytes,
+                uploaded=uploaded,
+                extra=extra,
+            ),
+            subtype="html",
+            attachments=attachments,
+        )
+        fm = FastMail(conf)
+        await fm.send_message(message)
+        status = EmailStatus.sent.value
+        sent = True
+        logger.info("Correo de backup enviado a %s (adjunto=%s)", email_to, attach_sent)
+    except Exception as e:
+        error_text = _root_cause_message(e)
+        traceback_text = traceback.format_exc()[:_TRACEBACK_MAX_LEN]
+        logger.exception("Error en send_backup_email_with_audit para %s", email_to)
+
+    metadata_: dict[str, object] = {
+        "filename": filename,
+        "size_bytes": size_bytes,
+        "uploaded": uploaded,
+        "attachment_sent": attach_sent,
+    }
+    if traceback_text:
+        metadata_["traceback"] = traceback_text
+
+    session.add(EmailAudit(
+        user_name="backup",
+        email_to=email_to,
+        email_type="backup_database",
+        status=status,
+        error=error_text,
+        metadata_=metadata_,
+        sent_at=datetime.now(timezone.utc) if sent else None,
+    ))
+    return sent
