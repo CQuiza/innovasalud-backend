@@ -9,7 +9,13 @@ from fastapi_mail import ConnectionConfig, FastMail, MessageSchema
 
 from app.core.settings import get_settings
 from app.models.enums import EmailStatus
-from app.utils.email_templates import credentials_body, expired_body, issued_body, backup_body
+from app.utils.email_templates import (
+    EXPIRED_EMAIL_SUBJECT,
+    backup_body,
+    credentials_body,
+    expired_body,
+    issued_body,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -109,6 +115,7 @@ async def send_certificate_expired_email(
     certificate_uid: str,
     base_url: str | None = None,
     certificate_type_name: str | None = None,
+    expires_at: datetime | None = None,
 ) -> None:
     """Envía un correo notificando la expiración de un certificado."""
     conf = _get_mail_config()
@@ -116,13 +123,10 @@ async def send_certificate_expired_email(
         logger.warning("SMTP no configurado. No se envió correo de certificado expirado a %s", email_to)
         return
 
-    settings = get_settings()
-    app_name = settings.project_name
-
     message = MessageSchema(
-        subject=f"Tu certificado ha expirado — {app_name}",
+        subject=EXPIRED_EMAIL_SUBJECT,
         recipients=[email_to],
-        body=expired_body(app_name, student_name, certificate_type_name),
+        body=expired_body(student_name, certificate_type_name, expires_at),
         subtype="html",
     )
     fm = FastMail(conf)
@@ -223,6 +227,7 @@ async def send_expired_with_audit(
     certificate_uid: str,
     user_name: str | None = None,
     certificate_type_name: str | None = None,
+    expires_at: datetime | None = None,
 ) -> None:
     """Notifica expiración de certificado y registra resultado en email_audit."""
     status = EmailStatus.failed.value
@@ -232,6 +237,7 @@ async def send_expired_with_audit(
         await send_certificate_expired_email(
             email_to, student_name, certificate_uid,
             certificate_type_name=certificate_type_name,
+            expires_at=expires_at,
         )
         status = EmailStatus.sent.value
     except Exception as e:

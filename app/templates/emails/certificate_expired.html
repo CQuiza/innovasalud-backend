@@ -1,0 +1,1012 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+
+    <!-- Compatibilidad con Outlook -->
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+
+    <!-- Responsive -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>
+        ¡Tu certificado ha vencido!
+    </title>
+
+    <style>
+        /* ==========================================
+           RESET
+           ========================================== */
+
+        html,
+        body {
+            margin: 0 !important;
+            padding: 0 !important;
+            width: 100% !important;
+            height: 100% !important;
+        }
+
+        body {
+            background-color: #ffffff;
+            font-family: Arial, Helvetica, sans-serif;
+            -webkit-text-size-adjust: 100%;
+            -ms-text-size-adjust: 100%;
+        }
+
+        table {
+            border-spacing: 0;
+            border-collapse: collapse;
+            mso-table-lspace: 0pt;
+            mso-table-rspace: 0pt;
+        }
+
+        td {
+            padding: 0;
+        }
+
+        img {
+            border: 0;
+            outline: none;
+            text-decoration: none;
+            -ms-interpolation-mode: bicubic;
+        }
+
+        a {
+            text-decoration: none;
+        }
+
+        /* ==========================================
+           RESPONSIVE
+           ========================================== */
+
+        @media only screen and (max-width: 620px) {
+
+            .email-container {
+                width: 100% !important;
+            }
+
+            .content-padding {
+                padding-left: 24px !important;
+                padding-right: 24px !important;
+            }
+
+            .promotion-box {
+                padding-left: 18px !important;
+                padding-right: 18px !important;
+            }
+
+            .footer-icon {
+                padding-left: 18px !important;
+                padding-right: 18px !important;
+            }
+
+            .main-title {
+                font-size: 21px !important;
+            }
+
+            .body-text {
+                font-size: 15px !important;
+                line-height: 1.65 !important;
+            }
+        }
+    </style>
+</head>
+
+
+<body style="
+    margin:0;
+    padding:0;
+    background-color:#ffffff;
+">
+
+<!-- ==========================================================
+     CONTENEDOR GENERAL
+     ========================================================== -->
+
+<table
+    role="presentation"
+    width="100%"
+    cellpadding="0"
+    cellspacing="0"
+    border="0"
+    style="
+        width:100%;
+        background-color:#ffffff;
+    "
+>
+    <tr>
+        <td align="center">
+
+            <!-- ==================================================
+                 CONTENEDOR PRINCIPAL - aprox. 600 px
+                 ================================================== -->
+
+            <table
+                role="presentation"
+                class="email-container"
+                width="600"
+                cellpadding="0"
+                cellspacing="0"
+                border="0"
+                style="
+                    width:600px;
+                    max-width:600px;
+                    margin:0 auto;
+                    background-color:#ffffff;
+                "
+            >
+
+
+                <!-- ==================================================
+                     LOGO / ENCABEZADO
+                     ================================================== -->
+
+                <tr>
+                    <td
+                        align="center"
+                        style="
+                            padding:28px 35px 18px 35px;
+                        "
+                    >
+
+                        <!--
+                            REEMPLAZAR POR EL LOGO REAL
+
+                            Ejemplo:
+                            https://tudominio.com/static/img/logo-innovasalud.png
+                        -->
+
+                        <img
+                            src="{{ logo_url }}"
+                            width="190"
+                            alt="INNOVASALUD COLOMBIA SAS"
+                            style="
+                                display:block;
+                                width:190px;
+                                max-width:100%;
+                                height:auto;
+                                margin:0 auto;
+                            "
+                        >
+
+                    </td>
+                </tr>
+
+
+                <!-- ==================================================
+                     CONTENIDO
+                     ================================================== -->
+
+                <tr>
+                    <td
+                        class="content-padding"
+                        style="
+                            padding:10px 48px 0 48px;
+                            color:#3d3d3d;
+                        "
+                    >
+
+
+                        <!-- ==================================================
+                             SALUDO
+                             ================================================== -->
+
+                        <p
+                            class="body-text"
+                            style="
+                                margin:18px 0 30px 0;
+                                font-family:Arial, Helvetica, sans-serif;
+                                font-size:16px;
+                                line-height:1.7;
+                                color:#444444;
+                            "
+                        >
+                            Saludos Cordiales,{% if student_name %}<br><strong>{{ student_name }}</strong>{% endif %}
+                        </p>
+
+
+                        <!-- ==================================================
+                             INTRODUCCIÓN
+                             ================================================== -->
+
+                        <p
+                            class="body-text"
+                            style="
+                                margin:0 0 25px 0;
+                                font-family:Arial, Helvetica, sans-serif;
+                                font-size:15px;
+                                line-height:1.75;
+                                color:#3f3f3f;
+                            "
+                        >
+
+                            En
+                            <strong>INNOVASALUD COLOMBIA SAS</strong>
+                            nos alegra haber sido parte de tu proceso de
+                            formación profesional.
+
+                            <strong>
+                                Queremos recordarte que tu certificado{% if certificate_type_name %} {{ certificate_type_name }}{% endif %} se encuentra vencido,
+                            </strong>
+                            {% if expires_at %}con fecha de vencimiento
+                            <strong>{{ expires_at }}</strong>.{% else %}según su vigencia.{% endif %}
+
+                        </p>
+
+
+                        <!-- ==================================================
+                             BLOQUE NORMATIVO
+                             ================================================== -->
+
+                        <table
+                            role="presentation"
+                            width="100%"
+                            cellpadding="0"
+                            cellspacing="0"
+                            border="0"
+                            style="
+                                width:100%;
+                                margin:22px 0 30px 0;
+                            "
+                        >
+                            <tr>
+
+                                <!-- Línea azul -->
+                                <td
+                                    width="4"
+                                    style="
+                                        width:4px;
+                                        background-color:#27a9e1;
+                                    "
+                                >
+                                </td>
+
+                                <!-- Texto -->
+                                <td
+                                    style="
+                                        padding:18px 18px 18px 20px;
+                                        background-color:#ffffff;
+                                    "
+                                >
+
+                                    <p
+                                        class="body-text"
+                                        style="
+                                            margin:0;
+                                            font-family:Arial, Helvetica, sans-serif;
+                                            font-size:14px;
+                                            line-height:1.7;
+                                            color:#444444;
+                                        "
+                                    >
+
+                                        Como sabes, todos nuestros cursos
+                                        están diseñados bajo el
+                                        <strong>
+                                            marco normativo del Artículo
+                                            2.6.6.8 del Decreto 1075 de 2015
+                                            del Ministerio de Educación Nacional
+                                        </strong>
+                                        y la
+                                        <strong>
+                                            Resolución 3100 de 2019 del
+                                            Ministerio de Salud y Protección
+                                            Social,
+                                        </strong>
+                                        garantizando formación de alta calidad
+                                        y cumplimiento regulatorio.
+
+                                    </p>
+
+                                </td>
+
+                            </tr>
+                        </table>
+
+
+                        <!-- ==================================================
+                             BLOQUE 1
+                             ================================================== -->
+
+                        <table
+                            role="presentation"
+                            width="100%"
+                            cellpadding="0"
+                            cellspacing="0"
+                            border="0"
+                            style="
+                                width:100%;
+                                margin:0 0 22px 0;
+                            "
+                        >
+                            <tr>
+
+                                <!-- Icono -->
+
+                                <td
+                                    width="50"
+                                    valign="top"
+                                    style="
+                                        width:50px;
+                                        padding:3px 8px 0 0;
+                                    "
+                                >
+
+                                    <!--
+                                        Puedes reemplazar el emoji por una
+                                        imagen real del diseño original.
+                                    -->
+
+                                    <div
+                                        style="
+                                            font-size:23px;
+                                            line-height:1;
+                                            text-align:center;
+                                        "
+                                    >
+                                        🧑‍💻
+                                    </div>
+
+                                </td>
+
+
+                                <!-- Texto -->
+
+                                <td
+                                    valign="top"
+                                    style="
+                                        padding:0 0 0 4px;
+                                    "
+                                >
+
+                                    <p
+                                        class="body-text"
+                                        style="
+                                            margin:0;
+                                            font-family:Arial, Helvetica, sans-serif;
+                                            font-size:14px;
+                                            line-height:1.7;
+                                            color:#555555;
+                                        "
+                                    >
+
+                                        En
+                                        <strong>INNOVASALUD</strong>,
+                                        tu aprendizaje es completamente
+                                        <strong>
+                                            virtual, autónomo y disponible
+                                            24/7
+                                        </strong>
+                                        por medio de nuestra plataforma
+                                        <strong>Q10</strong>,
+                                        para que estudies a tu ritmo desde
+                                        cualquier lugar.
+
+                                    </p>
+
+                                </td>
+
+                            </tr>
+                        </table>
+
+
+                        <!-- ==================================================
+                             BLOQUE 2
+                             ================================================== -->
+
+                        <table
+                            role="presentation"
+                            width="100%"
+                            cellpadding="0"
+                            cellspacing="0"
+                            border="0"
+                            style="
+                                width:100%;
+                                margin:0 0 28px 0;
+                            "
+                        >
+                            <tr>
+
+                                <!-- Icono -->
+
+                                <td
+                                    width="50"
+                                    valign="top"
+                                    style="
+                                        width:50px;
+                                        padding:3px 8px 0 0;
+                                    "
+                                >
+
+                                    <div
+                                        style="
+                                            font-size:23px;
+                                            line-height:1;
+                                            text-align:center;
+                                        "
+                                    >
+                                        📜
+                                    </div>
+
+                                </td>
+
+
+                                <!-- Texto -->
+
+                                <td
+                                    valign="top"
+                                    style="
+                                        padding:0 0 0 4px;
+                                    "
+                                >
+
+                                    <p
+                                        class="body-text"
+                                        style="
+                                            margin:0;
+                                            font-family:Arial, Helvetica, sans-serif;
+                                            font-size:14px;
+                                            line-height:1.7;
+                                            color:#555555;
+                                        "
+                                    >
+
+                                        Además, recuerda que nuestra
+                                        <strong>
+                                            certificación se genera de forma
+                                            inmediata
+                                        </strong>
+                                        una vez realices el pago, en
+                                        <strong>formato PDF</strong>
+                                        con código
+                                        <strong>QR</strong>
+                                        para su verificación en línea.
+
+                                    </p>
+
+                                </td>
+
+                            </tr>
+                        </table>
+
+
+                        <!-- ==================================================
+                             SEPARADOR
+                             ================================================== -->
+
+                        <table
+                            role="presentation"
+                            width="100%"
+                            cellpadding="0"
+                            cellspacing="0"
+                            border="0"
+                        >
+                            <tr>
+                                <td
+                                    style="
+                                        height:1px;
+                                        line-height:1px;
+                                        font-size:1px;
+                                        background-color:#eeeeee;
+                                    "
+                                >
+                                    &nbsp;
+                                </td>
+                            </tr>
+                        </table>
+
+
+                        <!-- ==================================================
+                             CTA PRINCIPAL
+                             ================================================== -->
+
+                        <p
+                            style="
+                                margin:30px 0 8px 0;
+                                text-align:center;
+                                font-family:Arial, Helvetica, sans-serif;
+                                font-size:15px;
+                                line-height:1.6;
+                                color:#3e3e3e;
+                            "
+                        >
+
+                            <strong>
+                                👉 Renueva tu certificación ahora
+                            </strong>
+                            y continúa fortaleciendo tu perfil profesional
+                            en el área de la salud.
+
+                        </p>
+
+
+                        <!-- ==================================================
+                             TEXTO WHATSAPP
+                             ================================================== -->
+
+                        <p
+                            style="
+                                margin:10px 0 20px 0;
+                                text-align:center;
+                                font-family:Arial, Helvetica, sans-serif;
+                                font-size:13px;
+                                line-height:1.6;
+                                color:#777777;
+                                font-style:italic;
+                            "
+                        >
+
+                            Haz clic aquí para comunicarte con nuestro equipo
+                            y recibir asesoría personalizada:
+
+                        </p>
+
+
+                        <!-- ==================================================
+                             BOTÓN WHATSAPP
+                             ================================================== -->
+
+                        <table
+                            role="presentation"
+                            width="100%"
+                            cellpadding="0"
+                            cellspacing="0"
+                            border="0"
+                        >
+                            <tr>
+                                <td align="center">
+
+                                    <a
+                                        href="{{ whatsapp_url }}"
+                                        target="_blank"
+                                        style="
+                                            display:inline-block;
+                                            padding:14px 30px;
+                                            background-color:#25d366;
+                                            border-radius:6px;
+                                            color:#ffffff;
+                                            font-family:Arial, Helvetica, sans-serif;
+                                            font-size:15px;
+                                            font-weight:bold;
+                                            letter-spacing:0.5px;
+                                            text-decoration:none;
+                                        "
+                                    >
+                                        ESCRÍBENOS AL WHATSAPP
+                                    </a>
+
+                                </td>
+                            </tr>
+                        </table>
+
+
+                        <!-- ==================================================
+                             SEPARADOR
+                             ================================================== -->
+
+                        <table
+                            role="presentation"
+                            width="100%"
+                            cellpadding="0"
+                            cellspacing="0"
+                            border="0"
+                            style="
+                                margin-top:32px;
+                            "
+                        >
+                            <tr>
+                                <td
+                                    style="
+                                        height:1px;
+                                        line-height:1px;
+                                        font-size:1px;
+                                        background-color:#eeeeee;
+                                    "
+                                >
+                                    &nbsp;
+                                </td>
+                            </tr>
+                        </table>
+
+
+                        <!-- ==================================================
+                             BENEFICIO EXCLUSIVO
+                             ================================================== -->
+
+                        <p
+                            style="
+                                margin:25px 0 12px 0;
+                                font-family:Arial, Helvetica, sans-serif;
+                                font-size:13px;
+                                line-height:1.5;
+                                font-weight:bold;
+                                letter-spacing:2px;
+                                color:#303030;
+                            "
+                        >
+
+                            🎁 &nbsp;BENEFICIO EXCLUSIVO PARA NUESTROS
+                            ESTUDIANTES:
+
+                        </p>
+
+
+                        <!-- ==================================================
+                             CAJA EXTERIOR PUNTEADA
+                             ================================================== -->
+
+                        <table
+                            role="presentation"
+                            width="100%"
+                            cellpadding="0"
+                            cellspacing="0"
+                            border="0"
+                            style="
+                                width:100%;
+                                border:2px dashed #48b6df;
+                                margin:0;
+                            "
+                        >
+                            <tr>
+                                <td
+                                    class="promotion-box"
+                                    style="
+                                        padding:25px 24px 27px 24px;
+                                    "
+                                >
+
+
+                                    <!-- Texto superior -->
+
+                                    <p
+                                        style="
+                                            margin:0 0 22px 0;
+                                            text-align:center;
+                                            font-family:Arial, Helvetica, sans-serif;
+                                            font-size:14px;
+                                            line-height:1.7;
+                                            color:#777777;
+                                            font-style:italic;
+                                        "
+                                    >
+
+                                        Por ser parte de la familia
+                                        <strong>
+                                            INNOVASALUD COLOMBIA SAS
+                                        </strong>,
+                                        podrás acceder a descuentos especiales
+                                        en tus próximas inscripciones.
+
+                                    </p>
+
+
+                                    <!-- ==================================================
+                                         CAJA INTERIOR
+                                         ================================================== -->
+
+                                    <table
+                                        role="presentation"
+                                        width="100%"
+                                        cellpadding="0"
+                                        cellspacing="0"
+                                        border="0"
+                                        style="
+                                            width:100%;
+                                            border:1px solid #dce9ee;
+                                        "
+                                    >
+                                        <tr>
+                                            <td
+                                                align="center"
+                                                style="
+                                                    padding:20px 14px 18px 14px;
+                                                "
+                                            >
+
+                                                <!-- Título -->
+
+                                                <p
+                                                    style="
+                                                        margin:0 0 10px 0;
+                                                        font-family:Arial, Helvetica, sans-serif;
+                                                        font-size:15px;
+                                                        line-height:1.4;
+                                                        color:#20a9df;
+                                                        font-weight:bold;
+                                                    "
+                                                >
+
+                                                    ✨ Promoción vigente
+
+                                                </p>
+
+
+                                                <!-- Oferta -->
+
+                                                <p
+                                                    style="
+                                                        margin:0;
+                                                        font-family:Arial, Helvetica, sans-serif;
+                                                        font-size:14px;
+                                                        line-height:1.65;
+                                                        color:#333333;
+                                                    "
+                                                >
+
+                                                    Por la compra de
+                                                    <strong>
+                                                        5 cursos básicos
+                                                    </strong>,
+                                                    te obsequiamos el
+                                                    <strong>
+                                                        sexto curso básico
+                                                        totalmente GRATIS.
+                                                    </strong>
+
+                                                </p>
+
+                                            </td>
+                                        </tr>
+                                    </table>
+
+                                </td>
+                            </tr>
+                        </table>
+
+
+                        <!-- ==================================================
+                             MENSAJE FINAL
+                             ================================================== -->
+
+                        <p
+                            style="
+                                margin:30px 0 30px 0;
+                                text-align:center;
+                                font-family:Arial, Helvetica, sans-serif;
+                                font-size:13px;
+                                line-height:1.7;
+                                color:#777777;
+                                font-style:italic;
+                            "
+                        >
+
+                            ¡Aprovecha esta oportunidad para seguir creciendo
+                            profesionalmente y ampliar tu portafolio de
+                            certificaciones!
+
+                        </p>
+
+
+                        <!-- ==================================================
+                             FIRMA
+                             ================================================== -->
+
+                        <table
+                            role="presentation"
+                            width="100%"
+                            cellpadding="0"
+                            cellspacing="0"
+                            border="0"
+                            style="
+                                margin-bottom:35px;
+                            "
+                        >
+                            <tr>
+
+                                <!-- Línea vertical -->
+                                <td
+                                    width="3"
+                                    style="
+                                        width:3px;
+                                        background-color:#eeeeee;
+                                    "
+                                >
+                                    &nbsp;
+                                </td>
+
+                                <td
+                                    style="
+                                        padding:5px 0 5px 18px;
+                                    "
+                                >
+
+                                    <p
+                                        style="
+                                            margin:0 0 5px 0;
+                                            font-family:Arial, Helvetica, sans-serif;
+                                            font-size:13px;
+                                            line-height:1.5;
+                                            color:#777777;
+                                            font-style:italic;
+                                        "
+                                    >
+                                        Con aprecio,
+                                    </p>
+
+                                    <p
+                                        style="
+                                            margin:0 0 4px 0;
+                                            font-family:Arial, Helvetica, sans-serif;
+                                            font-size:14px;
+                                            line-height:1.5;
+                                            color:#202020;
+                                            font-weight:bold;
+                                        "
+                                    >
+                                        Equipo INNOVASALUD COLOMBIA SAS
+                                    </p>
+
+                                    <p
+                                        style="
+                                            margin:0;
+                                            font-family:Arial, Helvetica, sans-serif;
+                                            font-size:12px;
+                                            line-height:1.5;
+                                            color:#36aee2;
+                                        "
+                                    >
+                                        🩵 Formación virtual para profesionales
+                                        de la salud
+                                    </p>
+
+                                </td>
+
+                            </tr>
+                        </table>
+
+
+                    </td>
+                </tr>
+
+
+                <!-- ==========================================================
+                     FOOTER AZUL OSCURO
+                     ========================================================== -->
+
+                <tr>
+                    <td>
+
+                        <table
+                            role="presentation"
+                            width="100%"
+                            cellpadding="0"
+                            cellspacing="0"
+                            border="0"
+                            style="
+                                width:100%;
+                                background-color:#10182d;
+                            "
+                        >
+
+                            <tr>
+
+                                <td
+                                    align="center"
+                                    style="
+                                        padding:45px 20px;
+                                    "
+                                >
+
+                                    <!-- ==================================================
+                                         ICONOS SOCIALES
+                                         ================================================== -->
+
+                                    <table
+                                        role="presentation"
+                                        cellpadding="0"
+                                        cellspacing="0"
+                                        border="0"
+                                    >
+
+                                        <tr>
+
+
+                                            <!-- ==============================
+                                                 WEB
+                                                 ============================== -->
+
+                                            <td
+                                                class="footer-icon"
+                                                align="center"
+                                                style="
+                                                    padding:0 27px;
+                                                "
+                                            >
+
+                                                <a
+                                                    href="{{ website_url }}"
+                                                    target="_blank"
+                                                    style="
+                                                        text-decoration:none;
+                                                        color:#ffffff;
+                                                        font-family:Arial, Helvetica, sans-serif;
+                                                        font-size:13px;
+                                                        font-weight:bold;
+                                                    "
+                                                >
+                                                    Sitio web
+                                                </a>
+
+                                            </td>
+
+
+                                            <!-- ==============================
+                                                 FACEBOOK
+                                                 ============================== -->
+
+                                            <td
+                                                class="footer-icon"
+                                                align="center"
+                                                style="
+                                                    padding:0 27px;
+                                                "
+                                            >
+
+                                                <a
+                                                    href="{{ facebook_url }}"
+                                                    target="_blank"
+                                                    style="
+                                                        text-decoration:none;
+                                                        color:#ffffff;
+                                                        font-family:Arial, Helvetica, sans-serif;
+                                                        font-size:13px;
+                                                        font-weight:bold;
+                                                    "
+                                                >
+                                                    Facebook
+                                                </a>
+
+                                            </td>
+
+
+                                            <!-- ==============================
+                                                 INSTAGRAM
+                                                 ============================== -->
+
+                                            <td
+                                                class="footer-icon"
+                                                align="center"
+                                                style="
+                                                    padding:0 27px;
+                                                "
+                                            >
+
+                                                <a
+                                                    href="{{ instagram_url }}"
+                                                    target="_blank"
+                                                    style="
+                                                        text-decoration:none;
+                                                        color:#ffffff;
+                                                        font-family:Arial, Helvetica, sans-serif;
+                                                        font-size:13px;
+                                                        font-weight:bold;
+                                                    "
+                                                >
+                                                    Instagram
+                                                </a>
+
+                                            </td>
+
+
+                                        </tr>
+
+                                    </table>
+
+                                </td>
+
+                            </tr>
+
+                        </table>
+
+                    </td>
+                </tr>
+
+
+            </table>
+
+        </td>
+    </tr>
+</table>
+
+</body>
+</html>

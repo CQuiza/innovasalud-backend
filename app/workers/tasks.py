@@ -23,6 +23,7 @@ from app.repositories.user_repository import user_repository
 from app.services.certificate_storage import CertificateStorageService
 from app.utils.certificate_editor import apply_revoked_watermark_pdf
 from app.utils.email import send_backup_email_with_audit, send_certificate_expired_email
+from app.utils.helpers import student_display_name
 from app.utils.minio_client import get_backup_minio_client
 from app.utils.worker_audit import log_worker_action
 
@@ -96,8 +97,9 @@ async def _async_check_expired_certificates():
 
             student_user = cert.user
             if student_user and student_user.email:
+                student_name = student_display_name(student_user) or "Estudiante"
                 email_audit = EmailAudit(
-                    user_name=student_user.name,
+                    user_name=student_name,
                     email_to=student_user.email,
                     email_type="certificate_expired",
                 )
@@ -106,11 +108,12 @@ async def _async_check_expired_certificates():
                 try:
                     await send_certificate_expired_email(
                         email_to=student_user.email,
-                        student_name=student_user.name or "Estudiante",
+                        student_name=student_name,
                         certificate_uid=uid_str,
                         certificate_type_name=(
                             cert.certificate_type.name if cert.certificate_type else None
                         ),
+                        expires_at=cert.expires_at,
                     )
                     email_audit.status = EmailStatus.sent.value
                     email_audit.sent_at = func.now()
